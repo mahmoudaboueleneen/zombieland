@@ -2,8 +2,20 @@
 #include "Model_3DS.h"
 #include "GLTexture.h"
 #include <glut.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <cstring>
+#include <iostream>
 
-// Utility Classes
+#define GLUT_KEY_ESCAPE 27
+#define DEG2RAD(a) (a * 0.0174532925)
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+// Utility Classes/Enums
 class Vector {
 	public:
 		GLdouble x, y, z;
@@ -19,24 +31,48 @@ class Vector {
 			y += value;
 			z += value;
 		}
+
+		Vector operator +(const Vector& v) const {
+			return Vector(x + v.x, y + v.y, z + v.z);
+		}
+
+		Vector operator -(const Vector& v) const {
+			return Vector(x - v.x, y - v.y, z - v.z);
+		}
 };
+class BoundingBox {
+public:
+	Vector minPoint;  // minimum x, y, z coordinates
+	Vector maxPoint;  // maximum x, y, z coordinates
+
+	BoundingBox() {}
+	BoundingBox(Vector _minPoint, Vector _maxPoint) : minPoint(_minPoint), maxPoint(_maxPoint) {}
+
+	// Check if this bounding box intersects with another one
+	bool intersects(const BoundingBox& other) const {
+		return (minPoint.x <= other.maxPoint.x && maxPoint.x >= other.minPoint.x) &&
+			(minPoint.y <= other.maxPoint.y && maxPoint.y >= other.minPoint.y) &&
+			(minPoint.z <= other.maxPoint.z && maxPoint.z >= other.minPoint.z);
+	}
+};
+enum CameraMode { FIRST_PERSON, THIRD_PERSON };
 
 // Global Variables
 int WIDTH = 1280;
 int HEIGHT = 720;
+char title[] = "Zombieland";
 
 GLuint tex;
+GLTexture tex_ground;
 
-char title[] = "Zombieland";
-GLdouble fovy = 45.0;
+GLdouble fovy = 90.0;
 GLdouble aspectRatio = (GLdouble)WIDTH / (GLdouble)HEIGHT;
 GLdouble zNear = 0.1;
 GLdouble zFar = 1000;
-
 Vector Eye(20, 5, 20);
 Vector At(0, 0, 0);
 Vector Up(0, 1, 0);
-
+CameraMode cameraMode = THIRD_PERSON;
 int cameraZoom = 0;
 
 Model_3DS model_car;
@@ -57,7 +93,11 @@ Model_3DS model_zombie2;
 Model_3DS model_fence;
 Model_3DS model_streetlamp;
 
-GLTexture tex_ground;
+Vector Player(0, 0, 10);
+GLdouble playerAngle = 0;
+BoundingBox playerBoundingBox(Player - Vector(1, 1, 1), Player + Vector(1, 1, 1)); // 2x2x2 cube around the player (for collision detection)
+
+bool keys[256];
 
 // Configs
 void InitLightSource() {
@@ -100,7 +140,7 @@ void InitMaterial() {
 	GLfloat shininess[] = { 96.0f };
 	glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
 }
-void myInit(void) {
+void Init(void) {
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 
 	glMatrixMode(GL_PROJECTION);
@@ -185,8 +225,11 @@ void drawSurroundingStatues() {
 }
 
 // Display
-void myDisplay(void) {
+void Display(void) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glLoadIdentity();
+	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 
 	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
 	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f, 0.0f };
@@ -212,8 +255,8 @@ void myDisplay(void) {
 
 	// Draw Player
 	glPushMatrix();
-	glTranslatef(0, 0, 10);
-	glRotatef(-90, 0, 1, 0);
+	glTranslatef(Player.x, Player.y, Player.z);
+	glRotatef(-90 + playerAngle, 0, 1, 0);
 	glScaled(0.03, 0.03, 0.03);
 	model_player.Draw();
 	glPopMatrix();
@@ -334,60 +377,71 @@ void myDisplay(void) {
 }
 
 // Movement
-void myKeyboard(unsigned char button, int x, int y) {
-	switch (button)
-	{
-	case 'w':
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		break;
-	case 'r':
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		break;
-	case 27:
-		exit(0);
-		break;
-	default:
-		break;
+void KeyboardDown(unsigned char button, int x, int y) {
+	keys[button] = true;
+
+	if (button == '1') {
+		cameraMode = FIRST_PERSON;
+	}
+	else if (button == '2') {
+		cameraMode = THIRD_PERSON;
+	}
+}
+void KeyboardUp(unsigned char button, int x, int y) {
+	keys[button] = false;
+}
+
+// Update
+void Update() {
+	float playerSpeed = 0.1;
+
+	if (keys['w'] || keys['W']) {
+		Player.z -= playerSpeed;
+		playerAngle = 90;
+	}
+	else if (keys['s'] || keys['S']) {
+		Player.z += playerSpeed;
+		playerAngle = 270;
+	}
+	else if (keys['a'] || keys['A']) {
+		Player.x -= playerSpeed;
+		playerAngle = 180;
+	}
+	else if (keys['d'] || keys['D']) {
+		Player.x += playerSpeed;
+		playerAngle = 0;
+	}
+
+	// Update camera to follow player
+	if (cameraMode == THIRD_PERSON) {
+		Eye.x = Player.x;
+		Eye.y = Player.y + 5;  // position the camera above the player
+		Eye.z = Player.z + 10;  // position the camera behind the player
+
+		At.x = Player.x;
+		At.y = Player.y;
+		At.z = Player.z - 5;  // make the camera look at a point in front of the player
+	}
+	else if (cameraMode == FIRST_PERSON) {
+		// Position the camera at the player's eye level
+		Eye.x = Player.x;
+		Eye.y = Player.y + 5;  // Adjust this value as needed
+		Eye.z = Player.z;
+
+		// Calculate the direction the player is facing
+		float rad = playerAngle * (M_PI / 180);  // Convert angle to radians
+
+		// Make the camera look in the direction the player is facing
+		At.x = Eye.x + cos(rad);
+		At.y = Eye.y;
+		At.z = Eye.z - sin(rad);  // Use minus for the z-coordinate to look in the -z direction
 	}
 
 	glutPostRedisplay();
-}
-void myMotion(int x, int y) {
-	y = HEIGHT - y;
-
-	if (cameraZoom - y > 0)
-	{
-		Eye.x += -0.1;
-		Eye.z += -0.1;
-	}
-	else
-	{
-		Eye.x += 0.1;
-		Eye.z += 0.1;
-	}
-
-	cameraZoom = y;
-
-	glLoadIdentity();	//Clear Model_View Matrix
-
-	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);	//Setup Camera with modified paramters
-
-	GLfloat light_position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
-	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-
-	glutPostRedisplay();
-}
-void myMouse(int button, int state, int x, int y) {
-	y = HEIGHT - y;
-
-	if (state == GLUT_DOWN)
-	{
-		cameraZoom = y;
-	}
-}
+}	
 
 // Reshape
-void myReshape(int w, int h) {
+void Reshape(int w, int h) {
 	if (h == 0) {
 		h = 1;
 	}
@@ -444,7 +498,7 @@ void LoadAssets() {
 	model_bunker.Load("Models/bunker/Ruin.3ds");
 
 	model_zombie.Load("Models/zombie/ZOMBIE.3ds");
-	model_zombie2.Load("Models/zombie2/monster.3ds");
+	//model_zombie2.Load("Models/zombie2/monster.3ds");
 
 	model_fence.Load("Models/fence/fence_01_3ds.3ds");
 	model_streetlamp.Load("Models/streetlamp/Lamp.3ds");
@@ -461,19 +515,16 @@ void main(int argc, char** argv) {
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 	glutInitWindowSize(WIDTH, HEIGHT);
 	glutInitWindowPosition(100, 150);
-
 	glutCreateWindow(title);
 
-	glutDisplayFunc(myDisplay);
-	glutKeyboardFunc(myKeyboard);
-	glutMotionFunc(myMotion);
-	glutMouseFunc(myMouse);
-	glutReshapeFunc(myReshape);
+	glutDisplayFunc(Display);
+	glutKeyboardFunc(KeyboardDown);
+	glutKeyboardUpFunc(KeyboardUp);
+	glutReshapeFunc(Reshape);
+	glutIdleFunc(Update);
 
-	myInit();
-
+	Init();
 	LoadAssets();
-
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
