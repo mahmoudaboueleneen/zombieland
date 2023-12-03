@@ -104,12 +104,16 @@ GLdouble playerAngle = 0;
 BoundingBox playerBoundingBox(Player - Vector(1, 1, 1), Player + Vector(1, 1, 1)); // 2x2x2 cube around the player (for collision detection)
 
 bool keys[256];
+int totalGameTime = 30;
+int startTime;
+int currentScore = 0;
 
 auto lastFrameTime = std::chrono::high_resolution_clock::now();
 bool isJumping = false;
 float verticalVelocity = 0;
 float jumpTime = 0;
 float gravity = 9.8;
+
 
 // Configs
 void InitLightSource() {
@@ -186,7 +190,7 @@ void Init(void) {
 	glEnable(GL_NORMALIZE);
 }
 
-// Drawing
+// Environment 
 void drawGround() {
 	glDisable(GL_LIGHTING);	// Disable lighting 
 
@@ -236,8 +240,68 @@ void drawSurroundingStatues() {
 	
 }
 
+// HUD
+void drawTime(int remainingTime) {
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0, 1, 0, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	glColor3f(1.0f, 1.0f, 1.0f);
+
+	glRasterPos2f(0.01f, 0.95f);
+
+	char timeStr[20];
+	sprintf(timeStr, "Remaining Time: %d", remainingTime);
+
+	int len = strlen(timeStr);
+	for (int i = 0; i < len; i++) {
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, timeStr[i]);
+	}
+
+	glPopMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+
+	glMatrixMode(GL_MODELVIEW);
+}
+void drawScore(int score) {
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0, 1, 0, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	glColor3f(0, 0, 0);  // Set the color of the text to white
+
+	glRasterPos2f(0.01f, 0.90f);  // Position the text
+
+	char scoreStr[20];
+	sprintf(scoreStr, "Score: %d", score);  // Convert the score to a string
+
+	int len = strlen(scoreStr);
+	for (int i = 0; i < len; i++) {
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, scoreStr[i]);  // Draw each character of the score string
+	}
+
+	glPopMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+
+	glMatrixMode(GL_MODELVIEW);
+}
+
 // Display
-void Display(void) {
+void DisplayGame(void) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glLoadIdentity();
@@ -247,6 +311,21 @@ void Display(void) {
 	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f, 0.0f };
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
+
+	// Draw Time 
+	/*
+	int currentTime = glutGet(GLUT_ELAPSED_TIME);
+	int elapsedTime = (currentTime - startTime) / 1000;
+	int remainingTime = totalGameTime - elapsedTime;
+
+	if (remainingTime <= 0) {
+		// do something
+	}
+	drawTime(remainingTime);
+	*/
+
+	// Draw Score
+	drawScore(currentScore);
 
 	// Draw Ground
 	drawGround();
@@ -388,11 +467,11 @@ void Display(void) {
 	glutSwapBuffers();
 }
 
-// Movement
+// Controls
 void KeyboardDown(unsigned char button, int x, int y) {
 	keys[button] = true;
 
-	if (button == 27) {  // 27 is the ASCII value for the escape key
+	if (button == 27) {  // Equivalent to ESC key
 		exit(0);
 	} else if (button == '1') {
 		cameraMode = FIRST_PERSON;
@@ -400,9 +479,9 @@ void KeyboardDown(unsigned char button, int x, int y) {
 	else if (button == '2') {
 		cameraMode = THIRD_PERSON;
 	}
-	else if (button == ' ') {
+	else if (button == ' ' && !isJumping) {
 		isJumping = true;
-		verticalVelocity = 5;  // Adjust this value as needed
+		verticalVelocity = 5;
 		jumpTime = 0;
 	}
 }
@@ -474,15 +553,15 @@ void Update() {
 	// Update camera to follow player
 	if (cameraMode == THIRD_PERSON) {
 		// Calculate the camera's position based on the player's position and the camera angles
-		float distanceBehindPlayer = 3.5;  // Adjust this value as needed
-		float cameraHeight = 5.5;  // Adjust this value as needed
-		float cameraLeftOffset = 0;  // Adjust this value as needed
+		float distanceBehindPlayer = 3.5;
+		float cameraHeight = 5.5;
+		float cameraLeftOffset = 0;
 		Eye.x = Player.x - cos(cameraYaw) * distanceBehindPlayer - sin(cameraYaw) * cameraLeftOffset;
 		Eye.y = Player.y + cameraHeight;
 		Eye.z = Player.z + sin(cameraYaw) * distanceBehindPlayer + cos(cameraYaw) * cameraLeftOffset;
 
 		// Make the camera look forward from the player's perspective
-		float lookAheadDistance = 5;  // Adjust this value as needed
+		float lookAheadDistance = 5;
 		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
 		At.y = Eye.y + sin(cameraPitch) * lookAheadDistance;
 		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
@@ -490,7 +569,7 @@ void Update() {
 	else if (cameraMode == FIRST_PERSON) {
 		// Position the camera at the player's eye level
 		Eye.x = Player.x;
-		Eye.y = Player.y + 5;  // Adjust this value as needed
+		Eye.y = Player.y + 5;
 		Eye.z = Player.z;
 
 		// Calculate the direction the player is facing
@@ -604,7 +683,7 @@ void main(int argc, char** argv) {
 	glutInitWindowPosition(100, 150);
 	glutCreateWindow(title);
 
-	glutDisplayFunc(Display);
+	glutDisplayFunc(DisplayGame);
 	glutKeyboardFunc(KeyboardDown);
 	glutKeyboardUpFunc(KeyboardUp);
 	glutReshapeFunc(Reshape);
