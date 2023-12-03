@@ -38,6 +38,10 @@ class Vector {
 		Vector operator -(const Vector& v) const {
 			return Vector(x - v.x, y - v.y, z - v.z);
 		}
+
+		Vector cross(const Vector& v) const {
+			return Vector(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x);
+		}
 };
 class BoundingBox {
 public:
@@ -407,9 +411,10 @@ void MouseMoved(int x, int y) {
 
 	if (cameraMode == THIRD_PERSON) {
 		// Limit pitch to avoid flipping the camera and looking under the ground
-		float pitchLimit = M_PI / 6;  // Adjust as needed
-		if (cameraPitch < -pitchLimit) cameraPitch = -pitchLimit;
-		if (cameraPitch > pitchLimit) cameraPitch = pitchLimit;
+		float upperPitchLimit = M_PI / 6;  // Adjust as needed
+		float lowerPitchLimit = -M_PI / 12;  // Adjust as needed
+		if (cameraPitch < lowerPitchLimit) cameraPitch = lowerPitchLimit;
+		if (cameraPitch > upperPitchLimit) cameraPitch = upperPitchLimit;
 	}
 	else if (cameraMode == FIRST_PERSON) {
 		// Limit pitch to avoid flipping the camera and looking under the ground
@@ -454,26 +459,18 @@ void Update() {
 	// Update camera to follow player
 	if (cameraMode == THIRD_PERSON) {
 		// Calculate the camera's position based on the player's position and the camera angles
-		float distanceToPlayer = 10;  // Adjust as needed
-		float cameraHeight = 7;  // Adjust as needed
-		Eye.x = Player.x - cos(cameraYaw) * cos(cameraPitch) * distanceToPlayer;
-		Eye.y = Player.y + sin(cameraPitch) * distanceToPlayer + cameraHeight;
-		Eye.z = Player.z + sin(cameraYaw) * cos(cameraPitch) * distanceToPlayer;
+		float distanceBehindPlayer = 3.5;  // Adjust this value as needed
+		float cameraHeight = 5.5;  // Adjust this value as needed
+		float cameraLeftOffset = 0;  // Adjust this value as needed
+		Eye.x = Player.x - cos(cameraYaw) * distanceBehindPlayer - sin(cameraYaw) * cameraLeftOffset;
+		Eye.y = Player.y + cameraHeight;
+		Eye.z = Player.z + sin(cameraYaw) * distanceBehindPlayer + cos(cameraYaw) * cameraLeftOffset;
 
-		// Make the camera look at the player
-		At.x = Player.x;
-		At.y = Player.y;
-		At.z = Player.z;
-
-		/*
-		Eye.x = Player.x;
-		Eye.y = Player.y + 5;  // position the camera above the player
-		Eye.z = Player.z + 10;  // position the camera behind the player
-
-		At.x = Player.x;
-		At.y = Player.y;
-		At.z = Player.z - 5;  // make the camera look at a point in front of the player
-		*/
+		// Make the camera look forward from the player's perspective
+		float lookAheadDistance = 5;  // Adjust this value as needed
+		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
+		At.y = Eye.y + sin(cameraPitch) * lookAheadDistance;
+		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
 	}
 	else if (cameraMode == FIRST_PERSON) {
 		// Position the camera at the player's eye level
