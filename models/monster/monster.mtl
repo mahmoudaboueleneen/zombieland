@@ -1,0 +1,20 @@
+newmtl TopSkin0
+Ka 0 0 0
+Ns 60.3403
+Ks 1 1 1
+Kd 0.679546 0.523271 0.184155
+newmtl Red_Plastic__10
+Ka 0 0 0
+Ns 121.51
+Ks 1 0.980392 0.980392
+Kd 1 0 0
+newmtl Red_Plastic__11
+Ka 0 0 0
+Ns 121.51
+Ks 1 0.980392 0.980392
+Kd 1 0 0
+newmtl TopSkin1
+Ka 0 0 0
+Ns 60.3403
+Ks 1 1 1
+Kd 0.679546 0.523271 0.184155
