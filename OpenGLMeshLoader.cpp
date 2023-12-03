@@ -8,7 +8,6 @@
 #include <cstring>
 #include <iostream>
 
-#define GLUT_KEY_ESCAPE 27
 #define DEG2RAD(a) (a * 0.0174532925)
 
 #ifndef M_PI
@@ -74,6 +73,8 @@ Vector At(0, 0, 0);
 Vector Up(0, 1, 0);
 CameraMode cameraMode = THIRD_PERSON;
 int cameraZoom = 0;
+int lastMouseX = -1, lastMouseY = -1;
+float cameraYaw = 0, cameraPitch = 0;
 
 Model_3DS model_car;
 Model_3DS model_jeep;
@@ -380,7 +381,9 @@ void Display(void) {
 void KeyboardDown(unsigned char button, int x, int y) {
 	keys[button] = true;
 
-	if (button == '1') {
+	if (button == 27) {  // 27 is the ASCII value for the escape key
+		exit(0);
+	} else if (button == '1') {
 		cameraMode = FIRST_PERSON;
 	}
 	else if (button == '2') {
@@ -390,30 +393,79 @@ void KeyboardDown(unsigned char button, int x, int y) {
 void KeyboardUp(unsigned char button, int x, int y) {
 	keys[button] = false;
 }
+void MouseMoved(int x, int y) {
+	// Calculate mouse movement since last frame
+	int centerX = WIDTH / 2;
+	int centerY = HEIGHT / 2;
+	int deltaX = x - centerX;
+	int deltaY = y - centerY;
+
+	// Adjust camera angles
+	float sensitivity = 0.005f;  // Adjust as needed
+	cameraYaw -= deltaX * sensitivity;
+	cameraPitch -= deltaY * sensitivity;
+
+	if (cameraMode == THIRD_PERSON) {
+		// Limit pitch to avoid flipping the camera and looking under the ground
+		float pitchLimit = M_PI / 6;  // Adjust as needed
+		if (cameraPitch < -pitchLimit) cameraPitch = -pitchLimit;
+		if (cameraPitch > pitchLimit) cameraPitch = pitchLimit;
+	}
+	else if (cameraMode == FIRST_PERSON) {
+		// Limit pitch to avoid flipping the camera and looking under the ground
+		float pitchLimit = M_PI / 2.5;  // Adjust as needed
+		if (cameraPitch < -pitchLimit) cameraPitch = -pitchLimit;
+		if (cameraPitch > pitchLimit) cameraPitch = pitchLimit;
+	}
+
+	// Update player's rotation to match the camera's yaw angle
+	playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+
+	// Warp mouse cursor back to the center of the window
+	glutWarpPointer(centerX, centerY);
+}
 
 // Update
 void Update() {
 	float playerSpeed = 0.1;
 
 	if (keys['w'] || keys['W']) {
-		Player.z -= playerSpeed;
-		playerAngle = 90;
+		Player.x += playerSpeed * cos(cameraYaw);
+		Player.z -= playerSpeed * sin(cameraYaw);
+		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
 	else if (keys['s'] || keys['S']) {
-		Player.z += playerSpeed;
-		playerAngle = 270;
+		Player.x -= playerSpeed * cos(cameraYaw);
+		Player.z += playerSpeed * sin(cameraYaw);
+		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
 	else if (keys['a'] || keys['A']) {
-		Player.x -= playerSpeed;
-		playerAngle = 180;
+		Player.x -= playerSpeed * sin(cameraYaw);
+		Player.z -= playerSpeed * cos(cameraYaw);
+		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
 	else if (keys['d'] || keys['D']) {
-		Player.x += playerSpeed;
-		playerAngle = 0;
+		Player.x += playerSpeed * sin(cameraYaw);
+		Player.z += playerSpeed * cos(cameraYaw);
+		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
+
 
 	// Update camera to follow player
 	if (cameraMode == THIRD_PERSON) {
+		// Calculate the camera's position based on the player's position and the camera angles
+		float distanceToPlayer = 10;  // Adjust as needed
+		float cameraHeight = 7;  // Adjust as needed
+		Eye.x = Player.x - cos(cameraYaw) * cos(cameraPitch) * distanceToPlayer;
+		Eye.y = Player.y + sin(cameraPitch) * distanceToPlayer + cameraHeight;
+		Eye.z = Player.z + sin(cameraYaw) * cos(cameraPitch) * distanceToPlayer;
+
+		// Make the camera look at the player
+		At.x = Player.x;
+		At.y = Player.y;
+		At.z = Player.z;
+
+		/*
 		Eye.x = Player.x;
 		Eye.y = Player.y + 5;  // position the camera above the player
 		Eye.z = Player.z + 10;  // position the camera behind the player
@@ -421,6 +473,7 @@ void Update() {
 		At.x = Player.x;
 		At.y = Player.y;
 		At.z = Player.z - 5;  // make the camera look at a point in front of the player
+		*/
 	}
 	else if (cameraMode == FIRST_PERSON) {
 		// Position the camera at the player's eye level
@@ -431,10 +484,10 @@ void Update() {
 		// Calculate the direction the player is facing
 		float rad = playerAngle * (M_PI / 180);  // Convert angle to radians
 
-		// Make the camera look in the direction the player is facing
-		At.x = Eye.x + cos(rad);
-		At.y = Eye.y;
-		At.z = Eye.z - sin(rad);  // Use minus for the z-coordinate to look in the -z direction
+		// Calculate the direction the camera is looking
+		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch);
+		At.y = Eye.y + sin(cameraPitch);
+		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch);
 	}
 
 	glutPostRedisplay();
@@ -522,6 +575,8 @@ void main(int argc, char** argv) {
 	glutKeyboardUpFunc(KeyboardUp);
 	glutReshapeFunc(Reshape);
 	glutIdleFunc(Update);
+	glutPassiveMotionFunc(MouseMoved);
+	glutSetCursor(GLUT_CURSOR_NONE);
 
 	Init();
 	LoadAssets();
