@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <cstring>
 #include <iostream>
+#include <chrono>
 
 #define DEG2RAD(a) (a * 0.0174532925)
 
@@ -103,6 +104,12 @@ GLdouble playerAngle = 0;
 BoundingBox playerBoundingBox(Player - Vector(1, 1, 1), Player + Vector(1, 1, 1)); // 2x2x2 cube around the player (for collision detection)
 
 bool keys[256];
+
+auto lastFrameTime = std::chrono::high_resolution_clock::now();
+bool isJumping = false;
+float verticalVelocity = 0;
+float jumpTime = 0;
+float gravity = 9.8;
 
 // Configs
 void InitLightSource() {
@@ -393,6 +400,11 @@ void KeyboardDown(unsigned char button, int x, int y) {
 	else if (button == '2') {
 		cameraMode = THIRD_PERSON;
 	}
+	else if (button == ' ') {
+		isJumping = true;
+		verticalVelocity = 5;  // Adjust this value as needed
+		jumpTime = 0;
+	}
 }
 void KeyboardUp(unsigned char button, int x, int y) {
 	keys[button] = false;
@@ -432,6 +444,10 @@ void MouseMoved(int x, int y) {
 
 // Update
 void Update() {
+	auto currentFrameTime = std::chrono::high_resolution_clock::now();
+	float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentFrameTime - lastFrameTime).count();
+	lastFrameTime = currentFrameTime;
+
 	float playerSpeed = 0.1;
 
 	if (keys['w'] || keys['W']) {
@@ -454,7 +470,6 @@ void Update() {
 		Player.z += playerSpeed * cos(cameraYaw);
 		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
-
 
 	// Update camera to follow player
 	if (cameraMode == THIRD_PERSON) {
@@ -485,6 +500,28 @@ void Update() {
 		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch);
 		At.y = Eye.y + sin(cameraPitch);
 		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch);
+	}
+
+	if (isJumping) {
+		// Apply the vertical velocity to the player's position
+		Player.y += verticalVelocity * deltaTime;  // deltaTime is the time elapsed since the last frame
+
+		// Decrease the vertical velocity over time (simulate gravity)
+		verticalVelocity -= gravity * deltaTime;  // gravity is the acceleration due to gravity
+
+		// Increase the jump time
+		jumpTime += deltaTime;
+
+		// End the jump after a certain time or when the player hits the ground
+		if (Player.y <= 0) {  // Adjust this condition as needed
+			isJumping = false;
+			verticalVelocity = 0;  // Reset the vertical velocity
+		}
+	}
+	else if (Player.y > 0) {
+		// If the player is not jumping but is above the ground, apply gravity
+		Player.y -= gravity * deltaTime;
+		if (Player.y < 0) Player.y = 0;  // Prevent the player from going below the ground
 	}
 
 	glutPostRedisplay();
