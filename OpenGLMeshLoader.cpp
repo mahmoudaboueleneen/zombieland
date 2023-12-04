@@ -40,6 +40,10 @@ class Vector {
 			return Vector(x - v.x, y - v.y, z - v.z);
 		}
 
+		Vector operator /(float value) const {
+			return Vector(x / value, y / value, z / value);
+		}
+
 		Vector cross(const Vector& v) const {
 			return Vector(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x);
 		}
@@ -82,10 +86,9 @@ int lastMouseX = -1, lastMouseY = -1;
 float cameraYaw = 0, cameraPitch = 0;
 
 Model_3DS model_car;
-Model_3DS model_jeep;
+
 Model_3DS model_spaceCraft;
 Model_3DS model_tree;
-Model_3DS model_player;
 Model_3DS model_moster;
 Model_3DS model_statue;
 Model_3DS model_medkit;
@@ -94,14 +97,27 @@ Model_3DS model_medicine3;
 Model_3DS model_rocks;
 Model_3DS model_house;
 Model_3DS model_bunker;
-Model_3DS model_zombie;
 Model_3DS model_zombie2;
 Model_3DS model_fence;
 Model_3DS model_streetlamp;
 
-Vector Player(0, 0, 10);
+// Player
+Model_3DS model_player;
+Vector playerPosition(0, 0, 10);
+BoundingBox playerBoundingBox(playerPosition - Vector(1, 1, 1), playerPosition + Vector(1, 1, 1)); // 2x2x2 cube around the player (for collision detection)
 GLdouble playerAngle = 0;
-BoundingBox playerBoundingBox(Player - Vector(1, 1, 1), Player + Vector(1, 1, 1)); // 2x2x2 cube around the player (for collision detection)
+
+// Jeep
+Model_3DS model_jeep;
+Vector jeepPosition(25, 7, -25);
+float jeepBoundingBoxOffsetZ = 12;  // Define the offset in the positive z direction to move the bounding box closer to the jeep
+BoundingBox jeepBoundingBox(jeepPosition - Vector(1, 10, 1) + Vector(0, 0, jeepBoundingBoxOffsetZ), jeepPosition + Vector(10, 10, 10) + Vector(0, 0, jeepBoundingBoxOffsetZ));
+
+// Zombie
+Model_3DS model_zombie;
+Vector zombiePosition(20, 3.3, 10);
+BoundingBox zombieBoundingBox(zombiePosition - Vector(1, 1, 1), zombiePosition + Vector(1, 1, 1));
+GLdouble zombieAngle = 0;
 
 bool keys[256];
 int totalGameTime = 30;
@@ -113,7 +129,6 @@ bool isJumping = false;
 float verticalVelocity = 0;
 float jumpTime = 0;
 float gravity = 9.8;
-
 
 // Configs
 void InitLightSource() {
@@ -239,6 +254,26 @@ void drawSurroundingStatues() {
 	}
 	
 }
+void drawBoundingBox(const BoundingBox& box) {
+	// Disable lighting to make the bounding box always visible
+	glDisable(GL_LIGHTING);
+
+	// Set the color of the bounding box to red
+	glColor3f(1.0f, 0.0f, 0.0f);
+
+	// Calculate the size of the bounding box
+	Vector size = box.maxPoint - box.minPoint;
+
+	// Draw a wireframe cube at the position of the bounding box with the size of the bounding box
+	glPushMatrix();
+	glTranslatef(box.minPoint.x + size.x / 2, box.minPoint.y + size.y / 2, box.minPoint.z + size.z / 2);
+	glScalef(size.x, size.y, size.z);
+	glutWireCube(1.0);
+	glPopMatrix();
+
+	// Re-enable lighting
+	glEnable(GL_LIGHTING);
+}
 
 // HUD
 void drawTime(int remainingTime) {
@@ -312,6 +347,11 @@ void DisplayGame(void) {
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
 
+	// Draw Bounding Boxes
+	drawBoundingBox(playerBoundingBox);
+	drawBoundingBox(jeepBoundingBox);
+	drawBoundingBox(zombieBoundingBox);
+
 	// Draw Time 
 	/*
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
@@ -346,7 +386,7 @@ void DisplayGame(void) {
 
 	// Draw Player
 	glPushMatrix();
-	glTranslatef(Player.x, Player.y, Player.z);
+	glTranslatef(playerPosition.x, playerPosition.y, playerPosition.z);
 	glRotatef(-90 + playerAngle, 0, 1, 0);
 	glScaled(0.03, 0.03, 0.03);
 	model_player.Draw();
@@ -356,7 +396,7 @@ void DisplayGame(void) {
 	glPushMatrix();
 	glTranslatef(0, 0.0, 20);
 	glRotatef(130, 0, 1,0);
-	glScaled(0.02, 0.02, 0.02);
+	glScaled(0.03, 0.03, 0.03);
 	model_moster.Draw();
 	glPopMatrix();
 
@@ -381,9 +421,10 @@ void DisplayGame(void) {
 
 	// Draw Jeep
 	glPushMatrix();
-	glTranslatef(18, 3, 20);
-	glRotatef(130, 0, 1, 0);
-	glScaled(0.1, 0.1, 0.1);
+	glTranslatef(jeepPosition.x, jeepPosition.y, jeepPosition.z);
+	glRotatef(130, 0, 1, 0);  // Existing rotation
+	glRotatef(-315, 0, 1, 0);  // New rotation to align the model with the bounding box
+	glScaled(0.25, 0.25, 0.25);
 	model_jeep.Draw();
 	glPopMatrix();
 
@@ -421,7 +462,7 @@ void DisplayGame(void) {
 
 	// Draw Zombie
 	glPushMatrix();
-	glTranslatef(20, 3.3, 10);
+	glTranslatef(zombiePosition.x, zombiePosition.y, zombiePosition.z);
 	glRotatef(90.f, 1, 0, 0);
 	glRotatef(270.f, 0, 0, 1);
 	glScaled(3, 3, 3);
@@ -527,27 +568,37 @@ void Update() {
 	float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentFrameTime - lastFrameTime).count();
 	lastFrameTime = currentFrameTime;
 
+	Vector previousPlayerPosition = playerPosition;
+
 	float playerSpeed = 0.1;
 
 	if (keys['w'] || keys['W']) {
-		Player.x += playerSpeed * cos(cameraYaw);
-		Player.z -= playerSpeed * sin(cameraYaw);
+		playerPosition.x += playerSpeed * cos(cameraYaw);
+		playerPosition.z -= playerSpeed * sin(cameraYaw);
 		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
-	else if (keys['s'] || keys['S']) {
-		Player.x -= playerSpeed * cos(cameraYaw);
-		Player.z += playerSpeed * sin(cameraYaw);
+	if (keys['s'] || keys['S']) {
+		playerPosition.x -= playerSpeed * cos(cameraYaw);
+		playerPosition.z += playerSpeed * sin(cameraYaw);
 		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
-	else if (keys['a'] || keys['A']) {
-		Player.x -= playerSpeed * sin(cameraYaw);
-		Player.z -= playerSpeed * cos(cameraYaw);
+	if (keys['a'] || keys['A']) {
+		playerPosition.x -= playerSpeed * sin(cameraYaw);
+		playerPosition.z -= playerSpeed * cos(cameraYaw);
 		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
-	else if (keys['d'] || keys['D']) {
-		Player.x += playerSpeed * sin(cameraYaw);
-		Player.z += playerSpeed * cos(cameraYaw);
+	if (keys['d'] || keys['D']) {
+		playerPosition.x += playerSpeed * sin(cameraYaw);
+		playerPosition.z += playerSpeed * cos(cameraYaw);
 		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+
+	playerBoundingBox.minPoint = playerPosition - Vector(1, 1, 1);
+	playerBoundingBox.maxPoint = playerPosition + Vector(1, 1, 1);
+
+	// Check for collisions
+	if (playerBoundingBox.intersects(jeepBoundingBox)) {
+		playerPosition = previousPlayerPosition;
 	}
 
 	// Update camera to follow player
@@ -556,9 +607,9 @@ void Update() {
 		float distanceBehindPlayer = 3.5;
 		float cameraHeight = 5.5;
 		float cameraLeftOffset = 0;
-		Eye.x = Player.x - cos(cameraYaw) * distanceBehindPlayer - sin(cameraYaw) * cameraLeftOffset;
-		Eye.y = Player.y + cameraHeight;
-		Eye.z = Player.z + sin(cameraYaw) * distanceBehindPlayer + cos(cameraYaw) * cameraLeftOffset;
+		Eye.x = playerPosition.x - cos(cameraYaw) * distanceBehindPlayer - sin(cameraYaw) * cameraLeftOffset;
+		Eye.y = playerPosition.y + cameraHeight;
+		Eye.z = playerPosition.z + sin(cameraYaw) * distanceBehindPlayer + cos(cameraYaw) * cameraLeftOffset;
 
 		// Make the camera look forward from the player's perspective
 		float lookAheadDistance = 5;
@@ -568,9 +619,9 @@ void Update() {
 	}
 	else if (cameraMode == FIRST_PERSON) {
 		// Position the camera at the player's eye level
-		Eye.x = Player.x;
-		Eye.y = Player.y + 5;
-		Eye.z = Player.z;
+		Eye.x = playerPosition.x;
+		Eye.y = playerPosition.y + 5;
+		Eye.z = playerPosition.z;
 
 		// Calculate the direction the player is facing
 		float rad = playerAngle * (M_PI / 180);  // Convert angle to radians
@@ -583,7 +634,7 @@ void Update() {
 
 	if (isJumping) {
 		// Apply the vertical velocity to the player's position
-		Player.y += verticalVelocity * deltaTime;  // deltaTime is the time elapsed since the last frame
+		playerPosition.y += verticalVelocity * deltaTime;  // deltaTime is the time elapsed since the last frame
 
 		// Decrease the vertical velocity over time (simulate gravity)
 		verticalVelocity -= gravity * deltaTime;  // gravity is the acceleration due to gravity
@@ -592,15 +643,15 @@ void Update() {
 		jumpTime += deltaTime;
 
 		// End the jump after a certain time or when the player hits the ground
-		if (Player.y <= 0) {  // Adjust this condition as needed
+		if (playerPosition.y <= 0) {  // Adjust this condition as needed
 			isJumping = false;
 			verticalVelocity = 0;  // Reset the vertical velocity
 		}
 	}
-	else if (Player.y > 0) {
+	else if (playerPosition.y > 0) {
 		// If the player is not jumping but is above the ground, apply gravity
-		Player.y -= gravity * deltaTime;
-		if (Player.y < 0) Player.y = 0;  // Prevent the player from going below the ground
+		playerPosition.y -= gravity * deltaTime;
+		if (playerPosition.y < 0) playerPosition.y = 0;  // Prevent the player from going below the ground
 	}
 
 	glutPostRedisplay();
