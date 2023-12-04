@@ -667,21 +667,47 @@ void drawHealth(float health) {
 	glPushMatrix();
 	glLoadIdentity();
 
+	// Disable lighting
+	glDisable(GL_LIGHTING);
+
+	// Set the line width
+	glLineWidth(5.0f);  // Adjust as needed
+
 	// Set the color of the health bar based on the player's health
 	if (health > 0.25) {
-		glColor3f(0, 1, 0);  // Green color for health greater than 25%
+		glColor3f(0, 1, 0);  // White color for health greater than 25%
 	}
 	else {
 		glColor3f(1, 0, 0);  // Red color for health 25% or less
 	}
 
-	// Draw the health bar
-	glBegin(GL_QUADS);
-	glVertex2f(0.01f, 0.95f);  // Bottom left corner
-	glVertex2f(0.01f + health * 0.1f, 0.95f);  // Bottom right corner, reduced multiplier
-	glVertex2f(0.01f + health * 0.1f, 0.98f);  // Top right corner, reduced multiplier
-	glVertex2f(0.01f, 0.98f);  // Top left corner
+	// Draw the circular health bar
+	float radius = 0.05f;  // Radius of the health bar
+	float centerX = 0.9f;  // x-coordinate of the center of the health bar
+	float centerY = 0.15f;  // y-coordinate of the center of the health bar
+	int numSegments = 100;  // Number of segments to use for the circle
+	float angleStep = 2.0f * M_PI / numSegments;  // Angle between each segment
+
+	glBegin(GL_LINE_STRIP);
+	for (int i = numSegments; i >= (1.0f - health) * numSegments; i--) {
+		float angle = M_PI / 2 - i * angleStep;  // Angle of the current segment, starting from the top of the circle
+		float x = centerX + cos(angle) * radius;  // x-coordinate of the current segment
+		float y = centerY + sin(angle) * radius;  // y-coordinate of the current segment
+		glVertex2f(x, y);
+	}
 	glEnd();
+
+	// Draw the health value in the center of the health circle
+	glRasterPos2f(centerX - 0.02f, centerY - 0.01f);
+	char healthStr[20];
+	sprintf(healthStr, "%d%%", (int)(health * 100));
+	int len = strlen(healthStr);
+	for (int i = 0; i < len; i++) {
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, healthStr[i]);  // Draw each character of the health string
+	}
+
+	// Re-enable lighting
+	glEnable(GL_LIGHTING);
 
 	glPopMatrix();
 
@@ -798,34 +824,32 @@ void UpdateFirstScene(float deltaTime) {
 	float zombieSpeed = 0.02;
 	float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 	for (auto& zombie : scene1.zombies) {
-		Vector direction = scene1.player.playerPosition - zombie.zombiePosition;  // Calculate direction towards player
-		direction.y = 0;  // Remove the vertical component
-		direction.normalize();  // Normalize the direction
-		zombie.zombiePosition += direction * zombieSpeed;  // Move the zombie towards the player
+		Vector direction = scene1.player.playerPosition - zombie.zombiePosition;
+		direction.y = 0;
+		direction.normalize();
+		zombie.zombiePosition += direction * zombieSpeed;
 
-		// Update the zombie's bounding box
 		zombie.zombieBoundingBox.minPoint = zombie.zombiePosition - Vector(1, 1, 1);
 		zombie.zombieBoundingBox.maxPoint = zombie.zombiePosition + Vector(1, 1, 1);
 
-		// Make the zombie face the direction it's moving
 		zombie.zombieAngle = atan2(direction.x, direction.z) * (180.0 / M_PI);  // Convert from radians to degrees
 
 		// Check if the zombie hits the player and enough time has passed since the last hit
 		if (scene1.player.playerBoundingBox.intersects(zombie.zombieBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
-			// Decrease player's health
 			scene1.player.health -= zombie.damage;
 
-			// Prevent the player from moving through the zombie
+			if (scene1.player.health < 0) {
+				scene1.player.health = 0;
+			}
+
 			Vector pushBackDirection = scene1.player.playerPosition - zombie.zombiePosition;
-			pushBackDirection.y = 0;  // Remove the vertical component
+			pushBackDirection.y = 0;
 			pushBackDirection.normalize();
 			scene1.player.playerPosition = previousPlayerPosition + pushBackDirection * 0.1f; // Adjust the multiplier as needed
 
-			// Update the player's bounding box
 			scene1.player.playerBoundingBox.minPoint = scene1.player.playerPosition - Vector(1, 1, 1);
 			scene1.player.playerBoundingBox.maxPoint = scene1.player.playerPosition + Vector(1, 1, 1);
 
-			// Update the last hit time
 			lastHitTime = currentTime;
 		}
 	}
@@ -939,34 +963,32 @@ void UpdateSecondScene(float deltaTime) {
 	float ghostSpeed = 0.02;
 	float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
 	for (auto& ghost : scene2.ghosts) {
-		Vector direction = scene2.player.playerPosition - ghost.ghostPosition;  // Calculate direction towards player
-		direction.y = 0;  // Remove the vertical component
-		direction.normalize();  // Normalize the direction
-		ghost.ghostPosition += direction * ghostSpeed;  // Move the ghost towards the player
+		Vector direction = scene2.player.playerPosition - ghost.ghostPosition;
+		direction.y = 0;
+		direction.normalize();
+		ghost.ghostPosition += direction * ghostSpeed;
 
-		// Update the ghost's bounding box
 		ghost.ghostBoundingBox.minPoint = ghost.ghostPosition - Vector(1, 1, 1);
 		ghost.ghostBoundingBox.maxPoint = ghost.ghostPosition + Vector(1, 1, 1);
 
-		// Make the ghost face the direction it's moving
 		ghost.ghostAngle = atan2(direction.x, direction.z) * (180.0 / M_PI);  // Convert from radians to degrees
 
 		// Check if the ghost hits the player and enough time has passed since the last hit
 		if (scene2.player.playerBoundingBox.intersects(ghost.ghostBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
-			// Decrease player's health
 			scene2.player.health -= ghost.damage;
 
-			// Prevent the player from moving through the ghost
+			if (scene2.player.health < 0) {
+				scene2.player.health = 0;
+			}
+
 			Vector pushBackDirection = scene2.player.playerPosition - ghost.ghostPosition;
-			pushBackDirection.y = 0;  // Remove the vertical component
+			pushBackDirection.y = 0;
 			pushBackDirection.normalize();
 			scene2.player.playerPosition = previousPlayerPosition + pushBackDirection * 0.1f; // Adjust the multiplier as needed
 
-			// Update the player's bounding box
 			scene2.player.playerBoundingBox.minPoint = scene2.player.playerPosition - Vector(1, 1, 1);
 			scene2.player.playerBoundingBox.maxPoint = scene2.player.playerPosition + Vector(1, 1, 1);
 
-			// Update the last hit time
 			lastHitTime = currentTime;
 		}
 	}
@@ -1027,7 +1049,8 @@ void DisplayFirstScene(void) {
 	*/
 
 	// Draw Health
-	drawHealth(scene1.player.health);
+	float normalizedHealth = scene1.player.health / 100.0f;
+	drawHealth(normalizedHealth);
 
 	// Draw Score
 	drawScore(currentScore);
@@ -1149,7 +1172,8 @@ void DisplaySecondScene(void) {
 	*/
 
 	// Draw Health
-	drawHealth(scene2.player.health);
+	float normalizedHealth = scene2.player.health / 100.0f;
+	drawHealth(normalizedHealth);
 
 	// Draw Score
 	drawScore(currentScore);
