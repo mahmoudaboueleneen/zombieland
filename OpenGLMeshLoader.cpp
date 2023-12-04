@@ -337,6 +337,8 @@ Scene1 scene1;
 Scene2 scene2;
 int currentScene = 1;
 
+int scoreToBeDisplayed;
+
 int WIDTH = 1280;
 int HEIGHT = 720;
 char title[] = "Zombieland";
@@ -1042,6 +1044,62 @@ void DisplayDeathScreen() {
 
 	glutSwapBuffers();
 }
+void DisplayWinScreen() {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Set the projection matrix to orthographic for 2D rendering
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0, WIDTH, 0, HEIGHT);  // Adjust as needed
+
+	// Set the modelview matrix to identity for 2D rendering
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	// Disable lighting for 2D rendering
+	glDisable(GL_LIGHTING);
+
+	// Set the color to green
+	glColor3f(0, 1, 0);
+
+	// Position the text in the center of the screen
+	glRasterPos2f(WIDTH / 2 - 50, HEIGHT / 2);  // Adjust as needed
+
+	// Render the "YOU WIN" text
+	const char* text = "YOU WIN";
+	int len = strlen(text);
+	for (int i = 0; i < len; i++) {
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, text[i]);
+	}
+
+	// Position the score text below the "YOU WIN" text
+	glRasterPos2f(WIDTH / 2 - 50, HEIGHT / 2 - 20);  // Adjust as needed
+
+	// Render the score text
+	char scoreStr[20];
+	sprintf(scoreStr, "SCORE: %d", scoreToBeDisplayed);
+	len = strlen(scoreStr);
+	for (int i = 0; i < len; i++) {
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, scoreStr[i]);
+	}
+
+	// Re-enable lighting
+	glEnable(GL_LIGHTING);
+
+	// Restore the modelview matrix
+	glPopMatrix();
+
+	// Restore the projection matrix
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+
+	// Set the matrix mode back to modelview
+	glMatrixMode(GL_MODELVIEW);
+
+	glutSwapBuffers();
+}
 
 // Update
 void UpdateFirstScene(float deltaTime) {
@@ -1075,7 +1133,9 @@ void UpdateFirstScene(float deltaTime) {
 
 	// Check for collisions
 	if (scene1.player.playerBoundingBox.intersects(scene1.bunker.bunkerBoundingBox)) {
-		scene1.player.playerPosition = previousPlayerPosition;
+		DisableControls();
+		scoreToBeDisplayed = scene1.player.score;
+		glutDisplayFunc(DisplayWinScreen);
 	}
 	for (auto& rock : scene1.rocks) {
 		if (scene1.player.playerBoundingBox.intersects(rock.rocksBoundingBox)) {
@@ -1220,7 +1280,9 @@ void UpdateSecondScene(float deltaTime) {
 
 	// Check for collisions
 	if (scene2.player.playerBoundingBox.intersects(scene2.house.houseBoundingBox)) {
-		scene2.player.playerPosition = previousPlayerPosition;
+		DisableControls();
+		scoreToBeDisplayed = scene2.player.score;
+		glutDisplayFunc(DisplayWinScreen);
 	}
 	if (scene2.player.playerBoundingBox.intersects(scene2.streetlamp.streetlampBoundingBox)) {
 		scene2.player.playerPosition = previousPlayerPosition;
