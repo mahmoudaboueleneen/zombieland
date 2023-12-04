@@ -114,6 +114,7 @@ public:
 	Model_3DS model_medkit;
 	Vector medkitPosition;
 	BoundingBox medkitBoundingBox;
+	int worth;
 
 	Medkit()
 	{
@@ -122,7 +123,8 @@ public:
 	Medkit(Model_3DS model, Vector position)
 		: model_medkit(model),
 		medkitPosition(position),
-		medkitBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 1, 1))
+		medkitBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 1, 1)),
+		worth(100)
 	{
 	}
 };
@@ -186,6 +188,7 @@ public:
 	Model_3DS model_medicine;
 	Vector medicinePosition;
 	BoundingBox medicineBoundingBox;
+	int worth;
 
 	Medicine()
 	{
@@ -194,7 +197,8 @@ public:
 	Medicine(Model_3DS model, Vector position)
 		: model_medicine(model),
 		medicinePosition(position),
-		medicineBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 1, 1))
+		medicineBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 1, 1)),
+		worth(100)
 	{
 	}
 };
@@ -290,6 +294,7 @@ public:
 	BoundingBox playerBoundingBox;
 	GLdouble playerAngle;
 	int health;
+	int score;
 
 	Player()
 	{
@@ -300,7 +305,8 @@ public:
 		playerPosition(position),
 		playerBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 1, 1)),
 		playerAngle(0),
-		health(100)
+		health(100),
+		score(0)
 	{
 	}
 };
@@ -374,7 +380,6 @@ Model_3DS model_streetlamp;
 bool keys[256];
 int totalGameTime = 30;
 int startTime;
-int currentScore = 0;
 
 // For handling jumping
 auto lastFrameTime = std::chrono::high_resolution_clock::now();
@@ -769,7 +774,7 @@ void DisplayFirstScene(void) {
 	drawHealth(normalizedHealth);
 
 	// Draw Score
-	drawScore(currentScore);
+	drawScore(scene1.player.score);
 
 	// Draw Ground
 	drawGround();
@@ -892,7 +897,7 @@ void DisplaySecondScene(void) {
 	drawHealth(normalizedHealth);
 
 	// Draw Score
-	drawScore(currentScore);
+	drawScore(scene2.player.score);
 
 	// Draw Ground
 	drawGround();
@@ -1082,9 +1087,16 @@ void UpdateFirstScene(float deltaTime) {
 			scene1.player.playerPosition = previousPlayerPosition;
 		}
 	}
-	for (auto& medicine : scene1.medicines) {
-		if (scene1.player.playerBoundingBox.intersects(medicine.medicineBoundingBox)) {
-			scene1.player.playerPosition = previousPlayerPosition;
+	for (auto it = scene1.medicines.begin(); it != scene1.medicines.end(); ) {
+		if (scene1.player.playerBoundingBox.intersects(it->medicineBoundingBox)) {
+			// Increase the player's score by the worth of the medicine
+			scene1.player.score += it->worth;
+
+			// Remove the medicine from the scene
+			it = scene1.medicines.erase(it);
+		}
+		else {
+			++it;
 		}
 	}
 
@@ -1223,9 +1235,16 @@ void UpdateSecondScene(float deltaTime) {
 			scene2.player.playerPosition = previousPlayerPosition;
 		}
 	}
-	for (auto& medkit : scene2.medkits) {
-		if (scene2.player.playerBoundingBox.intersects(medkit.medkitBoundingBox)) {
-			scene2.player.playerPosition = previousPlayerPosition;
+	for (auto it = scene2.medkits.begin(); it != scene2.medkits.end(); ) {
+		if (scene2.player.playerBoundingBox.intersects(it->medkitBoundingBox)) {
+			// Increase the player's score by the worth of the medkit
+			scene2.player.score += it->worth;
+
+			// Remove the medkit from the scene
+			it = scene2.medkits.erase(it);
+		}
+		else {
+			++it;
 		}
 	}
 
