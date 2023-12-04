@@ -136,7 +136,7 @@ public:
 	Jeep(Model_3DS model, Vector position)
 		: model_jeep(model),
 		jeepPosition(position),
-		jeepBoundingBox(position - Vector(0.5, 10, 2), position + Vector(10, 10, 17))
+		jeepBoundingBox(position - Vector(0.5, 10, 2) + Vector(0, 0, 8), position + Vector(10, 10, 17) + Vector(0, 0, 8))
 	{
 	}
 };
@@ -204,7 +204,7 @@ public:
 	Rock(Model_3DS model, Vector position)
 		: model_rocks(model),
 		rocksPosition(position),
-		rocksBoundingBox(position - Vector(1, 1, 1), position + Vector(10, 10, 10))
+		rocksBoundingBox(position - Vector(1, 1, 1) + Vector(-3, 0, -7), position + Vector(10, 10, 10) + Vector(-3, 0, -7))
 	{
 	}
 };
@@ -221,7 +221,7 @@ public:
 	House(Model_3DS model, Vector position)
 		: model_house(model),
 		housePosition(position),
-		houseBoundingBox(position - Vector(1, 1, 1), position + Vector(16, 16, 16))
+		houseBoundingBox(position - Vector(1, 1, 1) + Vector(-6, 0, -7), position + Vector(16, 16, 16) + Vector(-6, 0, -7))
 	{
 	}
 };
@@ -238,7 +238,7 @@ public:
 	Bunker(Model_3DS model, Vector position)
 		: model_bunker(model),
 		bunkerPosition(position),
-		bunkerBoundingBox(position - Vector(1, 1, 1), position + Vector(15, 15, 15))
+		bunkerBoundingBox(position - Vector(1, 1, 1) + Vector(0, 0, -8), position + Vector(15, 15, 15) + Vector(0, 0, -8))
 	{
 	}
 };
@@ -302,13 +302,13 @@ public:
 // Global Variables
 Scene1 scene1;
 Scene2 scene2;
-int currentScene = 1;
+int currentScene = 2;
 
 int WIDTH = 1280;
 int HEIGHT = 720;
 char title[] = "Zombieland";
 
-GLuint tex;
+GLuint tex; // for sky
 GLTexture tex_ground;
 
 GLdouble fovy = 90.0;
@@ -330,74 +330,19 @@ Model_3DS model_statue;
 Model_3DS model_medicine3;
 Model_3DS model_zombie2;
 
-// Player
+// Models in use
 Model_3DS model_player;
-Vector playerPosition(0, 0, 10);
-BoundingBox playerBoundingBox(playerPosition - Vector(1, 1, 1), playerPosition + Vector(1, 1, 1));
-GLdouble playerAngle = 0;
-
-// Rocks
 Model_3DS model_rocks;
-Vector rocksPosition(20, 0, 32);
-Vector rockBoundingBoxOffset = Vector(-3, 0, -7);
-BoundingBox rocksBoundingBox(rocksPosition - Vector(1, 1, 1) + rockBoundingBoxOffset, rocksPosition + Vector(10, 10, 10) + rockBoundingBoxOffset);
-
-// Tree
 Model_3DS model_tree;
-Vector treePosition(10, 0, 0);
-BoundingBox treeBoundingBox(treePosition - Vector(1, 1, 1), treePosition + Vector(1, 1, 1));
-
-// Medicine
 Model_3DS model_medicine;
-Vector medicinePosition(14, 0, 20);
-BoundingBox medicineBoundingBox(medicinePosition - Vector(1, 1, 1), medicinePosition + Vector(1, 1, 1));
-
-// Bunker
 Model_3DS model_bunker;
-Vector bunkerPosition(-20, 0, 20);
-Vector bunkerBoundingBoxOffset(0, 0, -8);
-BoundingBox bunkerBoundingBox(bunkerPosition - Vector(1, 1, 1) + bunkerBoundingBoxOffset, bunkerPosition + Vector(15, 15, 15) + bunkerBoundingBoxOffset);
-
-// Zombie
 Model_3DS model_zombie;
-Vector zombiePosition(20, 3.3, 10);
-BoundingBox zombieBoundingBox(zombiePosition - Vector(1, 3.5, 1), zombiePosition + Vector(1, 3, 1));
-GLdouble zombieAngle = 0;
-
-
-// Jeep
 Model_3DS model_jeep;
-Vector jeepPosition(25, 7, -25);
-Vector jeepBoundingBoxOffset = Vector(0, 0, 8);
-BoundingBox jeepBoundingBox(jeepPosition - Vector(0.5, 10, 2) + jeepBoundingBoxOffset, jeepPosition + Vector(10, 10, 17) + jeepBoundingBoxOffset);
-
-// Fence
 Model_3DS model_fence;
-Vector fencePosition(15, 0, -5);
-BoundingBox fenceBoundingBox(fencePosition - Vector(0.1, 1, 0.1), fencePosition + Vector(8, 8, 0.5));
-
-// Medkit
 Model_3DS model_medkit;
-Vector medkitPosition(20, 0, 20);
-BoundingBox medkitBoundingBox(medkitPosition - Vector(1, 1, 1), medkitPosition + Vector(1, 1, 1));
-
-// House
 Model_3DS model_house;
-Vector housePosition(-30, 0, -20);
-Vector houseBoundingBoxOffset = Vector(-6, 0, -7);
-BoundingBox houseBoundingBox(housePosition - Vector(1, 1, 1) + houseBoundingBoxOffset, housePosition + Vector(16, 16, 16) + houseBoundingBoxOffset);
-
-// Ghost
 Model_3DS model_ghost;
-Vector ghostPosition(0, 0, 20);
-BoundingBox ghostBoundingBox(ghostPosition - Vector(1, 1, 1), ghostPosition + Vector(1, 7, 1));
-GLdouble ghostAngle = 0;
-
-// Streetlamp
 Model_3DS model_streetlamp;
-Vector streetlampPosition(20, 0, -15);
-BoundingBox streetlampBoundingBox(streetlampPosition - Vector(1, 1, 1), streetlampPosition + Vector(1, 8, 1));
-
 
 bool keys[256];
 int totalGameTime = 30;
@@ -411,7 +356,7 @@ float verticalVelocity = 0;
 float jumpTime = 0;
 float gravity = 9.8;
 
-// Config, Setup, Loading Assets
+// Config
 void InitLightSource() {
 	// Enable Lighting for this OpenGL Program
 	glEnable(GL_LIGHTING);
@@ -603,7 +548,11 @@ void MouseMoved(int x, int y) {
 	}
 
 	// Update player's rotation to match the camera's yaw angle
-	playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	if (currentScene == 1) {
+        scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+    } else if (currentScene == 2) {
+        scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+    }
 
 	// Warp mouse cursor back to the center of the window
 	glutWarpPointer(centerX, centerY);
@@ -738,59 +687,58 @@ void drawScore(int score) {
 }
 
 // Update
-void Update() {
-	auto currentFrameTime = std::chrono::high_resolution_clock::now();
-	float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentFrameTime - lastFrameTime).count();
-	lastFrameTime = currentFrameTime;
-
-	Vector previousPlayerPosition = playerPosition;
+void UpdateFirstScene(float deltaTime) {
+	Vector previousPlayerPosition = scene1.player.playerPosition;
 
 	float playerSpeed = 0.1;
 
 	if (keys['w'] || keys['W']) {
-		playerPosition.x += playerSpeed * cos(cameraYaw);
-		playerPosition.z -= playerSpeed * sin(cameraYaw);
-		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+		scene1.player.playerPosition.x += playerSpeed * cos(cameraYaw);
+		scene1.player.playerPosition.z -= playerSpeed * sin(cameraYaw);
+		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
 	if (keys['s'] || keys['S']) {
-		playerPosition.x -= playerSpeed * cos(cameraYaw);
-		playerPosition.z += playerSpeed * sin(cameraYaw);
-		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+		scene1.player.playerPosition.x -= playerSpeed * cos(cameraYaw);
+		scene1.player.playerPosition.z += playerSpeed * sin(cameraYaw);
+		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
 	if (keys['a'] || keys['A']) {
-		playerPosition.x -= playerSpeed * sin(cameraYaw);
-		playerPosition.z -= playerSpeed * cos(cameraYaw);
-		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+		scene1.player.playerPosition.x -= playerSpeed * sin(cameraYaw);
+		scene1.player.playerPosition.z -= playerSpeed * cos(cameraYaw);
+		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
 	if (keys['d'] || keys['D']) {
-		playerPosition.x += playerSpeed * sin(cameraYaw);
-		playerPosition.z += playerSpeed * cos(cameraYaw);
-		playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+		scene1.player.playerPosition.x += playerSpeed * sin(cameraYaw);
+		scene1.player.playerPosition.z += playerSpeed * cos(cameraYaw);
+		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
 	}
 
-	playerBoundingBox.minPoint = playerPosition - Vector(1, 1, 1);
-	playerBoundingBox.maxPoint = playerPosition + Vector(1, 1, 1);
+	scene1.player.playerBoundingBox.minPoint = scene1.player.playerPosition - Vector(1, 1, 1);
+	scene1.player.playerBoundingBox.maxPoint = scene1.player.playerPosition + Vector(1, 1, 1);
 
 	// Check for collisions
-	if (playerBoundingBox.intersects(jeepBoundingBox) ||
-		playerBoundingBox.intersects(rocksBoundingBox) ||
-		playerBoundingBox.intersects(treeBoundingBox) ||
-		playerBoundingBox.intersects(fenceBoundingBox) ||
-		playerBoundingBox.intersects(streetlampBoundingBox)
-		) {
-		playerPosition = previousPlayerPosition;
+	if (scene1.player.playerBoundingBox.intersects(scene1.bunker.bunkerBoundingBox)) {
+		scene1.player.playerPosition = previousPlayerPosition;
 	}
-	else if (playerBoundingBox.intersects(zombieBoundingBox) ||
-		playerBoundingBox.intersects(ghostBoundingBox)) {
-		playerPosition = previousPlayerPosition;
+	for (auto& rock : scene1.rocks) {
+		if (scene1.player.playerBoundingBox.intersects(rock.rocksBoundingBox)) {
+			scene1.player.playerPosition = previousPlayerPosition;
+		}
 	}
-	else if (playerBoundingBox.intersects(medicineBoundingBox) ||
-		playerBoundingBox.intersects(medkitBoundingBox)) {
-		playerPosition = previousPlayerPosition;
+	for (auto& tree : scene1.trees) {
+		if (scene1.player.playerBoundingBox.intersects(tree.treeBoundingBox)) {
+			scene1.player.playerPosition = previousPlayerPosition;
+		}
 	}
-	else if (playerBoundingBox.intersects(bunkerBoundingBox) ||
-		playerBoundingBox.intersects(houseBoundingBox)) {
-		playerPosition = previousPlayerPosition;
+	for (auto& medicine : scene1.medicines) {
+		if (scene1.player.playerBoundingBox.intersects(medicine.medicineBoundingBox)) {
+			scene1.player.playerPosition = previousPlayerPosition;
+		}
+	}
+	for (auto& zombie : scene1.zombies) {
+		if (scene1.player.playerBoundingBox.intersects(zombie.zombieBoundingBox)) {
+			scene1.player.playerPosition = previousPlayerPosition;
+		}
 	}
 
 	// Update camera to follow player
@@ -799,9 +747,9 @@ void Update() {
 		float distanceBehindPlayer = 3.5;
 		float cameraHeight = 5.5;
 		float cameraLeftOffset = 0;
-		Eye.x = playerPosition.x - cos(cameraYaw) * distanceBehindPlayer - sin(cameraYaw) * cameraLeftOffset;
-		Eye.y = playerPosition.y + cameraHeight;
-		Eye.z = playerPosition.z + sin(cameraYaw) * distanceBehindPlayer + cos(cameraYaw) * cameraLeftOffset;
+		Eye.x = scene1.player.playerPosition.x - cos(cameraYaw) * distanceBehindPlayer - sin(cameraYaw) * cameraLeftOffset;
+		Eye.y = scene1.player.playerPosition.y + cameraHeight;
+		Eye.z = scene1.player.playerPosition.z + sin(cameraYaw) * distanceBehindPlayer + cos(cameraYaw) * cameraLeftOffset;
 
 		// Make the camera look forward from the player's perspective
 		float lookAheadDistance = 5;
@@ -811,12 +759,12 @@ void Update() {
 	}
 	else if (cameraMode == FIRST_PERSON) {
 		// Position the camera at the player's eye level
-		Eye.x = playerPosition.x;
-		Eye.y = playerPosition.y + 5;
-		Eye.z = playerPosition.z;
+		Eye.x = scene1.player.playerPosition.x;
+		Eye.y = scene1.player.playerPosition.y + 5;
+		Eye.z = scene1.player.playerPosition.z;
 
 		// Calculate the direction the player is facing
-		float rad = playerAngle * (M_PI / 180);  // Convert angle to radians
+		float rad = scene1.player.playerAngle * (M_PI / 180);  // Convert angle to radians
 
 		// Calculate the direction the camera is looking
 		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch);
@@ -826,7 +774,7 @@ void Update() {
 
 	if (isJumping) {
 		// Apply the vertical velocity to the player's position
-		playerPosition.y += verticalVelocity * deltaTime;  // deltaTime is the time elapsed since the last frame
+		scene1.player.playerPosition.y += verticalVelocity * deltaTime;  // deltaTime is the time elapsed since the last frame
 
 		// Decrease the vertical velocity over time (simulate gravity)
 		verticalVelocity -= gravity * deltaTime;  // gravity is the acceleration due to gravity
@@ -835,15 +783,134 @@ void Update() {
 		jumpTime += deltaTime;
 
 		// End the jump after a certain time or when the player hits the ground
-		if (playerPosition.y <= 0) {  // Adjust this condition as needed
+		if (scene1.player.playerPosition.y <= 0) {  // Adjust this condition as needed
 			isJumping = false;
 			verticalVelocity = 0;  // Reset the vertical velocity
 		}
 	}
-	else if (playerPosition.y > 0) {
+	else if (scene1.player.playerPosition.y > 0) {
 		// If the player is not jumping but is above the ground, apply gravity
-		playerPosition.y -= gravity * deltaTime;
-		if (playerPosition.y < 0) playerPosition.y = 0;  // Prevent the player from going below the ground
+		scene1.player.playerPosition.y -= gravity * deltaTime;
+		if (scene1.player.playerPosition.y < 0) scene1.player.playerPosition.y = 0;  // Prevent the player from going below the ground
+	}
+}
+void UpdateSecondScene(float deltaTime) {
+	Vector previousPlayerPosition = scene2.player.playerPosition;
+
+	float playerSpeed = 0.1;
+
+	if (keys['w'] || keys['W']) {
+		scene2.player.playerPosition.x += playerSpeed * cos(cameraYaw);
+		scene2.player.playerPosition.z -= playerSpeed * sin(cameraYaw);
+		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+	if (keys['s'] || keys['S']) {
+		scene2.player.playerPosition.x -= playerSpeed * cos(cameraYaw);
+		scene2.player.playerPosition.z += playerSpeed * sin(cameraYaw);
+		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+	if (keys['a'] || keys['A']) {
+		scene2.player.playerPosition.x -= playerSpeed * sin(cameraYaw);
+		scene2.player.playerPosition.z -= playerSpeed * cos(cameraYaw);
+		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+	if (keys['d'] || keys['D']) {
+		scene2.player.playerPosition.x += playerSpeed * sin(cameraYaw);
+		scene2.player.playerPosition.z += playerSpeed * cos(cameraYaw);
+		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+
+	scene2.player.playerBoundingBox.minPoint = scene2.player.playerPosition - Vector(1, 1, 1);
+	scene2.player.playerBoundingBox.maxPoint = scene2.player.playerPosition + Vector(1, 1, 1);
+
+	// Check for collisions
+	if (scene2.player.playerBoundingBox.intersects(scene2.house.houseBoundingBox)) {
+		scene2.player.playerPosition = previousPlayerPosition;
+	}
+	for (auto& jeep : scene2.jeeps) {
+		if (scene2.player.playerBoundingBox.intersects(jeep.jeepBoundingBox)) {
+			scene2.player.playerPosition = previousPlayerPosition;
+		}
+	}
+	for (auto& fence : scene2.fences) {
+		if (scene2.player.playerBoundingBox.intersects(fence.fenceBoundingBox)) {
+			scene2.player.playerPosition = previousPlayerPosition;
+		}
+	}
+	for (auto& medkit : scene2.medkits) {
+		if (scene2.player.playerBoundingBox.intersects(medkit.medkitBoundingBox)) {
+			scene2.player.playerPosition = previousPlayerPosition;
+		}
+	}
+	for (auto& ghost : scene2.ghosts) {
+		if (scene2.player.playerBoundingBox.intersects(ghost.ghostBoundingBox)) {
+			scene2.player.playerPosition = previousPlayerPosition;
+		}
+	}
+
+	// Update camera to follow player
+	if (cameraMode == THIRD_PERSON) {
+		// Calculate the camera's position based on the player's position and the camera angles
+		float distanceBehindPlayer = 3.5;
+		float cameraHeight = 5.5;
+		float cameraLeftOffset = 0;
+		Eye.x = scene2.player.playerPosition.x - cos(cameraYaw) * distanceBehindPlayer - sin(cameraYaw) * cameraLeftOffset;
+		Eye.y = scene2.player.playerPosition.y + cameraHeight;
+		Eye.z = scene2.player.playerPosition.z + sin(cameraYaw) * distanceBehindPlayer + cos(cameraYaw) * cameraLeftOffset;
+
+		// Make the camera look forward from the player's perspective
+		float lookAheadDistance = 5;
+		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
+		At.y = Eye.y + sin(cameraPitch) * lookAheadDistance;
+		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
+	}
+	else if (cameraMode == FIRST_PERSON) {
+		// Position the camera at the player's eye level
+		Eye.x = scene2.player.playerPosition.x;
+		Eye.y = scene2.player.playerPosition.y + 5;
+		Eye.z = scene2.player.playerPosition.z;
+
+		// Calculate the direction the player is facing
+		float rad = scene2.player.playerAngle * (M_PI / 180);  // Convert angle to radians
+
+		// Calculate the direction the camera is looking
+		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch);
+		At.y = Eye.y + sin(cameraPitch);
+		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch);
+	}
+
+	if (isJumping) {
+		// Apply the vertical velocity to the player's position
+		scene2.player.playerPosition.y += verticalVelocity * deltaTime;  // deltaTime is the time elapsed since the last frame
+
+		// Decrease the vertical velocity over time (simulate gravity)
+		verticalVelocity -= gravity * deltaTime;  // gravity is the acceleration due to gravity
+
+		// Increase the jump time
+		jumpTime += deltaTime;
+
+		// End the jump after a certain time or when the player hits the ground
+		if (scene2.player.playerPosition.y <= 0) {  // Adjust this condition as needed
+			isJumping = false;
+			verticalVelocity = 0;  // Reset the vertical velocity
+		}
+	}
+	else if (scene2.player.playerPosition.y > 0) {
+		// If the player is not jumping but is above the ground, apply gravity
+		scene2.player.playerPosition.y -= gravity * deltaTime;
+		if (scene2.player.playerPosition.y < 0) scene2.player.playerPosition.y = 0;  // Prevent the player from going below the ground
+	}
+}
+void Update() {
+	auto currentFrameTime = std::chrono::high_resolution_clock::now();
+	float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentFrameTime - lastFrameTime).count();
+	lastFrameTime = currentFrameTime;
+
+	if (currentScene == 1) {
+		UpdateFirstScene(deltaTime);
+	}
+	else if (currentScene == 2) {
+		UpdateSecondScene(deltaTime);
 	}
 
 	glutPostRedisplay();
@@ -862,18 +929,20 @@ void DisplayFirstScene(void) {
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
 
 	// Draw Bounding Boxes for testing
-	drawBoundingBox(playerBoundingBox);
-	drawBoundingBox(jeepBoundingBox);
-	drawBoundingBox(zombieBoundingBox);
-	drawBoundingBox(rocksBoundingBox);
-	drawBoundingBox(treeBoundingBox);
-	drawBoundingBox(medicineBoundingBox);
-	drawBoundingBox(bunkerBoundingBox);
-	drawBoundingBox(fenceBoundingBox);
-	drawBoundingBox(medkitBoundingBox);
-	drawBoundingBox(houseBoundingBox);
-	drawBoundingBox(ghostBoundingBox);
-	drawBoundingBox(streetlampBoundingBox);
+	drawBoundingBox(scene1.player.playerBoundingBox);
+	drawBoundingBox(scene1.bunker.bunkerBoundingBox);
+	for (auto& rock : scene1.rocks) {
+		drawBoundingBox(rock.rocksBoundingBox);
+	}
+	for (auto& tree : scene1.trees) {
+		drawBoundingBox(tree.treeBoundingBox);
+	}
+	for (auto& medicine : scene1.medicines) {
+		drawBoundingBox(medicine.medicineBoundingBox);
+	}
+	for (auto& zombie : scene1.zombies) {
+		drawBoundingBox(zombie.zombieBoundingBox);
+	}
 
 	// Draw Time 
 	/*
@@ -893,129 +962,63 @@ void DisplayFirstScene(void) {
 	// Draw Ground
 	drawGround();
 
-	// Draw Tree
-	glPushMatrix();
-	glTranslatef(treePosition.x, treePosition.y, treePosition.z);
-	glScalef(0.7, 0.7, 0.7);
-	model_tree.Draw();
-	glPopMatrix();
-
-	// Draw Car
-	glPushMatrix();
-	glRotatef(90.f, 1, 0, 0);
-	glScaled(0.7, 0.7, 1);
-	model_car.Draw();
-	glPopMatrix();
-
 	// Draw Player
 	glPushMatrix();
-	glTranslatef(playerPosition.x, playerPosition.y, playerPosition.z);
-	glRotatef(-90 + playerAngle, 0, 1, 0);
+	glTranslatef(scene1.player.playerPosition.x, scene1.player.playerPosition.y, scene1.player.playerPosition.z);
+	glRotatef(-90 + scene1.player.playerAngle, 0, 1, 0);
 	glScaled(0.03, 0.03, 0.03);
-	model_player.Draw();
-	glPopMatrix();
-
-	// Draw Ghost
-	glPushMatrix();
-	glTranslatef(ghostPosition.x, ghostPosition.y, ghostPosition.z);
-	glRotatef(130, 0, 1,0);
-	glScaled(0.03, 0.03, 0.03);
-	model_ghost.Draw();
-	glPopMatrix();
-
-	// Draw Surrounding Statues (Walls)
-	drawSurroundingStatues();
-	
-	// Draw Medkit
-    glPushMatrix();
-	glTranslatef(medkitPosition.x, medkitPosition.y, medkitPosition.z);
-	glRotatef(130, 0, 1, 0);
-	glScaled(0.05, 0.05, 0.05);
-	model_medkit.Draw();
-	glPopMatrix();
-
-	// Draw Medicine
-	glPushMatrix();
-	glTranslatef(medicinePosition.x, medicinePosition.y, medicinePosition.z);
-	glRotatef(130, 0, 1, 0);
-	glScaled(0.05, 0.05, 0.05);
-	model_medicine.Draw();
-	glPopMatrix();
-
-	// Draw Jeep
-	glPushMatrix();
-	glTranslatef(jeepPosition.x, jeepPosition.y, jeepPosition.z);
-	glRotatef(130, 0, 1, 0);  // Existing rotation
-	glRotatef(-315, 0, 1, 0);  // New rotation to align the model with the bounding box
-	glScaled(0.25, 0.25, 0.25);
-	model_jeep.Draw();
-	glPopMatrix();
-
-	// Draw SpaceCraft
-	glPushMatrix();
-	glTranslatef(20, 0, -10);
-	glRotatef(130, 0, 1, 0);
-	glScaled(0.1, 0.1, 0.1);
-	model_spaceCraft.Draw();
-	glPopMatrix();
-
-	// Draw Rocks
-	glPushMatrix();
-	glTranslatef(rocksPosition.x, rocksPosition.y, rocksPosition.z);
-	glRotatef(130, 0, 1, 0);
-	glScaled(0.12, 0.12, 0.12);
-	model_rocks.Draw();
-	glPopMatrix();
-
-	// Draw House
-	glPushMatrix();
-	glTranslatef(housePosition.x, housePosition.y, housePosition.z);
-	glRotatef(90.f, 1, 0, 0);
-	glScaled(3, 3, 3);
-	model_house.Draw();
+	scene1.player.model_player.Draw();
 	glPopMatrix();
 
 	// Draw Bunker
 	glPushMatrix();
-	glTranslatef(bunkerPosition.x, bunkerPosition.y, bunkerPosition.z);
+	glTranslatef(scene1.bunker.bunkerPosition.x, scene1.bunker.bunkerPosition.y, scene1.bunker.bunkerPosition.z);
 	glRotatef(90, 0, 1, 0);
 	glRotatef(-35, 0, 1, 0);
 	glScaled(0.01, 0.01, 0.01);
-	model_bunker.Draw();
+	scene1.bunker.model_bunker.Draw();
 	glPopMatrix();
 
-	// Draw Zombie
-	glPushMatrix();
-	glTranslatef(zombiePosition.x, zombiePosition.y, zombiePosition.z);
-	glRotatef(90.f, 1, 0, 0);
-	glRotatef(270.f, 0, 0, 1);
-	glScaled(3, 3, 3);
-	model_zombie.Draw();
-	glPopMatrix();
+	// Draw Rocks
+	for (auto& rock : scene1.rocks) {
+		glPushMatrix();
+		glTranslatef(rock.rocksPosition.x, rock.rocksPosition.y, rock.rocksPosition.z);
+		glRotatef(130, 0, 1, 0);
+		glScaled(0.12, 0.12, 0.12);
+		rock.model_rocks.Draw();
+		glPopMatrix();
+	}
 
-	// Draw Zombie 2
-	glPushMatrix();
-	glTranslatef(27, 0, 10);
-	glScaled(0.07, 0.07, 0.07);
-	model_zombie2.Draw();
-	glPopMatrix();
+	// Draw Trees
+	for (auto& tree : scene1.trees) {
+		glPushMatrix();
+		glTranslatef(tree.treePosition.x, tree.treePosition.y, tree.treePosition.z);
+		glScalef(0.7, 0.7, 0.7);
+		tree.model_tree.Draw();
+		glPopMatrix();
+	}
 
-	// Draw Fence
-	glPushMatrix();
-	glTranslatef(fencePosition.x, fencePosition.y, fencePosition.z);
-	glRotatef(0.0f, 1, 0, 0);
-	glScaled(0.02, 0.02, 0.02);
-	model_fence.Draw();
-	glPopMatrix();
+	// Draw Medicines
+	for (auto& medicine : scene1.medicines) {
+		glPushMatrix();
+		glTranslatef(medicine.medicinePosition.x, medicine.medicinePosition.y, medicine.medicinePosition.z);
+		glRotatef(130, 0, 1, 0);
+		glScaled(0.05, 0.05, 0.05);
+		medicine.model_medicine.Draw();
+		glPopMatrix();
+	}
 
-	// Draw Streetlamp
-	glPushMatrix();
-	glTranslatef(streetlampPosition.x, streetlampPosition.y, streetlampPosition.z);
-	glRotatef(0.0f, 1, 0, 0);
-	glScaled(1.4, 1.4, 1.4);
-	model_streetlamp.Draw();
-	glPopMatrix();
-	
+	// Draw Zombies
+	for (auto& zombie : scene1.zombies) {
+		glPushMatrix();
+		glTranslatef(zombie.zombiePosition.x, zombie.zombiePosition.y, zombie.zombiePosition.z);
+		glRotatef(90.f, 1, 0, 0);
+		glRotatef(270.f, 0, 0, 1);
+		glScaled(3, 3, 3);
+		zombie.model_zombie.Draw();
+		glPopMatrix();
+	}
+
 	// Draw Skybox
 	glPushMatrix();
 	GLUquadricObj* qobj;
@@ -1031,8 +1034,122 @@ void DisplayFirstScene(void) {
 
 	glutSwapBuffers();
 }
-void DisplaySecondScene() {
+void DisplaySecondScene(void) {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glLoadIdentity();
+	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+
+	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
+	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f, 0.0f };
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
+
+	// Draw Bounding Boxes for testing
+	drawBoundingBox(scene2.player.playerBoundingBox);
+	drawBoundingBox(scene2.house.houseBoundingBox);
+	for (auto& jeep : scene2.jeeps) {
+		drawBoundingBox(jeep.jeepBoundingBox);
+	}
+	for (auto& fence : scene2.fences) {
+		drawBoundingBox(fence.fenceBoundingBox);
+	}
+	for (auto& medkit : scene2.medkits) {
+		drawBoundingBox(medkit.medkitBoundingBox);
+	}
+	for (auto& ghost : scene2.ghosts) {
+		drawBoundingBox(ghost.ghostBoundingBox);
+	}
+
+	// Draw Time 
+	/*
+	int currentTime = glutGet(GLUT_ELAPSED_TIME);
+	int elapsedTime = (currentTime - startTime) / 1000;
+	int remainingTime = totalGameTime - elapsedTime;
+
+	if (remainingTime <= 0) {
+		// do something
+	}
+	drawTime(remainingTime);
+	*/
+
+	// Draw Score
+	drawScore(currentScore);
+
+	// Draw Ground
+	drawGround();
+
+	// Draw Player
+	glPushMatrix();
+	glTranslatef(scene2.player.playerPosition.x, scene2.player.playerPosition.y, scene2.player.playerPosition.z);
+	glRotatef(-90 + scene2.player.playerAngle, 0, 1, 0);
+	glScaled(0.03, 0.03, 0.03);
+	scene2.player.model_player.Draw();
+	glPopMatrix();
+
+	// Draw Ghost
+	for (auto& ghost : scene2.ghosts) {
+		glPushMatrix();
+		glTranslatef(ghost.ghostPosition.x, ghost.ghostPosition.y, ghost.ghostPosition.z);
+		glRotatef(130, 0, 1, 0);
+		glScaled(0.03, 0.03, 0.03);
+		ghost.model_ghost.Draw();
+		glPopMatrix();
+	}
+
+	// Draw Medkit
+	for (auto& medkit : scene2.medkits) {
+		glPushMatrix();
+		glTranslatef(medkit.medkitPosition.x, medkit.medkitPosition.y, medkit.medkitPosition.z);
+		glRotatef(130, 0, 1, 0);
+		glScaled(0.05, 0.05, 0.05);
+		medkit.model_medkit.Draw();
+		glPopMatrix();
+	}
+
+	// Draw Jeep
+	for (auto& jeep : scene2.jeeps) {
+		glPushMatrix();
+		glTranslatef(jeep.jeepPosition.x, jeep.jeepPosition.y, jeep.jeepPosition.z);
+		glRotatef(130, 0, 1, 0);  // Existing rotation
+		glRotatef(-315, 0, 1, 0);  // New rotation to align the model with the bounding box
+		glScaled(0.25, 0.25, 0.25);
+		jeep.model_jeep.Draw();
+		glPopMatrix();
+	}
+
+	// Draw Fence
+	for (auto& fence : scene2.fences) {
+		glPushMatrix();
+		glTranslatef(fence.fencePosition.x, fence.fencePosition.y, fence.fencePosition.z);
+		glRotatef(0.0f, 1, 0, 0);
+		glScaled(0.02, 0.02, 0.02);
+		fence.model_fence.Draw();
+		glPopMatrix();
+	}
+
+	// Draw House
+	glPushMatrix();
+	glTranslatef(scene2.house.housePosition.x, scene2.house.housePosition.y, scene2.house.housePosition.z);
+	glRotatef(90.f, 1, 0, 0);
+	glScaled(3, 3, 3);
+	scene2.house.model_house.Draw();
+	glPopMatrix();
+
+	// Draw Skybox
+	glPushMatrix();
+	GLUquadricObj* qobj;
+	qobj = gluNewQuadric();
+	glTranslated(50, 0, 0);
+	glRotated(90, 1, 0, 1);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	gluQuadricTexture(qobj, true);
+	gluQuadricNormals(qobj, GL_SMOOTH);
+	gluSphere(qobj, 100, 100, 100);
+	gluDeleteQuadric(qobj);
+	glPopMatrix();
+
+	glutSwapBuffers();
 }
 
 // Main
@@ -1044,7 +1161,7 @@ void main(int argc, char** argv) {
 	glutInitWindowPosition(100, 150);
 	glutCreateWindow(title);
 
-	glutDisplayFunc(DisplayFirstScene);
+	glutDisplayFunc(DisplaySecondScene);
 	glutKeyboardFunc(KeyboardDown);
 	glutKeyboardUpFunc(KeyboardUp);
 	glutReshapeFunc(Reshape);
