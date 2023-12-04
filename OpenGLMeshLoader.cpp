@@ -8,14 +8,17 @@
 #include <cstring>
 #include <iostream>
 #include <chrono>
+#include <vector>
 
 #define DEG2RAD(a) (a * 0.0174532925)
-
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
-// Utility Classes/Enums
+// Enums
+enum CameraMode { FIRST_PERSON, THIRD_PERSON };
+
+// Utility Classes
 class Vector {
 	public:
 		GLdouble x, y, z;
@@ -65,9 +68,235 @@ public:
 	}
 
 };
-enum CameraMode { FIRST_PERSON, THIRD_PERSON };
 
-// Global Variables
+// Model Classes
+class Ghost {
+public:
+	Model_3DS model_ghost;
+	Vector ghostPosition;
+	BoundingBox ghostBoundingBox;
+	GLdouble ghostAngle;
+
+	Ghost()
+	{
+	}
+
+	Ghost(Model_3DS model, Vector position)
+		: model_ghost(model),
+		ghostPosition(position),
+		ghostBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 7, 1)),
+		ghostAngle(0)
+	{
+	}
+};
+class Medkit {
+public:
+	Model_3DS model_medkit;
+	Vector medkitPosition;
+	BoundingBox medkitBoundingBox;
+
+	Medkit()
+	{
+	}
+
+	Medkit(Model_3DS model, Vector position)
+		: model_medkit(model),
+		medkitPosition(position),
+		medkitBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 1, 1))
+	{
+	}
+};
+class Fence {
+public:
+	Model_3DS model_fence;
+	Vector fencePosition;
+	BoundingBox fenceBoundingBox;
+
+	Fence()
+	{
+	}
+
+	Fence(Model_3DS model, Vector position)
+		: model_fence(model),
+		fencePosition(position),
+		fenceBoundingBox(position - Vector(0.1, 1, 0.1), position + Vector(8, 8, 0.5))
+	{
+	}
+};
+class Jeep {
+public:
+	Model_3DS model_jeep;
+	Vector jeepPosition;
+	BoundingBox jeepBoundingBox;
+
+	Jeep()
+	{
+	}
+
+	Jeep(Model_3DS model, Vector position)
+		: model_jeep(model),
+		jeepPosition(position),
+		jeepBoundingBox(position - Vector(0.5, 10, 2), position + Vector(10, 10, 17))
+	{
+	}
+};
+class Zombie {
+public:
+	Model_3DS model_zombie;
+	Vector zombiePosition;
+	BoundingBox zombieBoundingBox;
+
+	Zombie()
+	{
+	}
+
+	Zombie(Model_3DS model, Vector position)
+		: model_zombie(model),
+		zombiePosition(position),
+		zombieBoundingBox(position - Vector(1, 3.5, 1), position + Vector(1, 3, 1))
+	{
+	}
+};
+class Medicine {
+public:
+	Model_3DS model_medicine;
+	Vector medicinePosition;
+	BoundingBox medicineBoundingBox;
+
+	Medicine()
+	{
+	}
+
+	Medicine(Model_3DS model, Vector position)
+		: model_medicine(model),
+		medicinePosition(position),
+		medicineBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 1, 1))
+	{
+	}
+};
+class Tree {
+public:
+	Model_3DS model_tree;
+	Vector treePosition;
+	BoundingBox treeBoundingBox;
+
+	Tree()
+	{
+	}
+
+	Tree(Model_3DS model, Vector position)
+		: model_tree(model),
+		treePosition(position),
+		treeBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 1, 1))
+	{
+	}
+};
+class Rock {
+public:
+	Model_3DS model_rocks;
+	Vector rocksPosition;
+	BoundingBox rocksBoundingBox;
+
+	Rock()
+	{
+	}
+
+	Rock(Model_3DS model, Vector position)
+		: model_rocks(model),
+		rocksPosition(position),
+		rocksBoundingBox(position - Vector(1, 1, 1), position + Vector(10, 10, 10))
+	{
+	}
+};
+class House {
+public:
+	Model_3DS model_house;
+	Vector housePosition;
+	BoundingBox houseBoundingBox;
+
+	House()
+	{
+	}
+
+	House(Model_3DS model, Vector position)
+		: model_house(model),
+		housePosition(position),
+		houseBoundingBox(position - Vector(1, 1, 1), position + Vector(16, 16, 16))
+	{
+	}
+};
+class Bunker {
+public:
+	Model_3DS model_bunker;
+	Vector bunkerPosition;
+	BoundingBox bunkerBoundingBox;
+
+	Bunker()
+	{
+	}
+
+	Bunker(Model_3DS model, Vector position)
+		: model_bunker(model),
+		bunkerPosition(position),
+		bunkerBoundingBox(position - Vector(1, 1, 1), position + Vector(15, 15, 15))
+	{
+	}
+};
+class Streetlamp {
+public:
+	Model_3DS model_streetlamp;
+	Vector streetlampPosition;
+	BoundingBox streetlampBoundingBox;
+
+	Streetlamp()
+	{
+	}
+
+	Streetlamp(Model_3DS model, Vector position)
+		: model_streetlamp(model),
+		streetlampPosition(position),
+		streetlampBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 8, 1))
+	{
+	}
+};
+class Player {
+public:
+	Model_3DS model_player;
+	Vector playerPosition;
+	BoundingBox playerBoundingBox;
+	GLdouble playerAngle;
+
+	Player()
+	{
+	}
+
+	Player(Model_3DS model, Vector position)
+		: model_player(model),
+		playerPosition(position),
+		playerBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 1, 1)),
+		playerAngle(0)
+	{
+	}
+};
+
+Player player;
+
+// Scene 1
+Bunker bunker;
+std::vector<Rock> rocks;
+std::vector<Tree> trees;
+std::vector<Medicine> medicines;
+std::vector<Zombie> zombies;
+
+// Scene 2
+House house;
+std::vector<Jeep> jeeps;
+std::vector<Fence> fences;
+std::vector<Medkit> medkits;
+std::vector<Ghost> ghosts;
+
+int currentScene = 1;
+
 int WIDTH = 1280;
 int HEIGHT = 720;
 char title[] = "Zombieland";
@@ -614,7 +843,7 @@ void Update() {
 }
 
 // Display
-void DisplayGame(void) {
+void DisplayFirstScene(void) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glLoadIdentity();
@@ -625,7 +854,7 @@ void DisplayGame(void) {
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
 
-	// Draw Bounding Boxes
+	// Draw Bounding Boxes for testing
 	drawBoundingBox(playerBoundingBox);
 	drawBoundingBox(jeepBoundingBox);
 	drawBoundingBox(zombieBoundingBox);
@@ -795,6 +1024,9 @@ void DisplayGame(void) {
 
 	glutSwapBuffers();
 }
+void DisplaySecondScene() {
+
+}
 
 // Main
 void main(int argc, char** argv) {
@@ -805,7 +1037,7 @@ void main(int argc, char** argv) {
 	glutInitWindowPosition(100, 150);
 	glutCreateWindow(title);
 
-	glutDisplayFunc(DisplayGame);
+	glutDisplayFunc(DisplayFirstScene);
 	glutKeyboardFunc(KeyboardDown);
 	glutKeyboardUpFunc(KeyboardUp);
 	glutReshapeFunc(Reshape);
@@ -815,6 +1047,24 @@ void main(int argc, char** argv) {
 
 	Init();
 	LoadAssets();
+
+	// Initialize Player
+	player = Player(model_player, Vector(0, 0, 10));
+
+	// Initialize Scene 1
+	bunker = Bunker(model_bunker, Vector(-20, 0, 20));
+	rocks.push_back(Rock(model_rocks, Vector(20, 0, 32)));
+	trees.push_back(Tree(model_tree, Vector(10, 0, 0)));
+	medicines.push_back(Medicine(model_medicine, Vector(14, 0, 20)));
+	zombies.push_back(Zombie(model_zombie, Vector(20, 3.3, 10)));
+
+	// Initialize Scene 2
+	house = House(model_house, Vector(-30, 0, -20));
+	jeeps.push_back(Jeep(model_jeep, Vector(25, 7, -25)));
+	fences.push_back(Fence(model_fence, Vector(15, 0, -5)));
+	medkits.push_back(Medkit(model_medkit, Vector(20, 0, 20)));
+	ghosts.push_back(Ghost(model_ghost, Vector(0, 0, 20)));
+
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
