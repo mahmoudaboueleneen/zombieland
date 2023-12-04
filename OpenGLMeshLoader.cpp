@@ -35,6 +35,13 @@ class Vector {
 			z += value;
 		}
 
+		Vector& operator +=(const Vector& other) {
+			x += other.x;
+			y += other.y;
+			z += other.z;
+			return *this;
+		}
+
 		Vector operator +(const Vector& v) const {
 			return Vector(x + v.x, y + v.y, z + v.z);
 		}
@@ -43,12 +50,23 @@ class Vector {
 			return Vector(x - v.x, y - v.y, z - v.z);
 		}
 
+		Vector operator *(float value) const {
+			return Vector(x * value, y * value, z * value);
+		}
+
 		Vector operator /(float value) const {
 			return Vector(x / value, y / value, z / value);
 		}
 
 		Vector cross(const Vector& v) const {
 			return Vector(y * v.z - z * v.y, z * v.x - x * v.z, x * v.y - y * v.x);
+		}
+
+		void normalize() {
+			float magnitude = sqrt(x * x + y * y + z * z);
+			x /= magnitude;
+			y /= magnitude;
+			z /= magnitude;
 		}
 };
 class BoundingBox {
@@ -76,6 +94,7 @@ public:
 	Vector ghostPosition;
 	BoundingBox ghostBoundingBox;
 	GLdouble ghostAngle;
+	int damage;
 
 	Ghost()
 	{
@@ -85,7 +104,8 @@ public:
 		: model_ghost(model),
 		ghostPosition(position),
 		ghostBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 7, 1)),
-		ghostAngle(0)
+		ghostAngle(0),
+		damage(25)
 	{
 	}
 };
@@ -145,6 +165,8 @@ public:
 	Model_3DS model_zombie;
 	Vector zombiePosition;
 	BoundingBox zombieBoundingBox;
+	GLdouble zombieAngle;
+	int damage;
 
 	Zombie()
 	{
@@ -153,7 +175,9 @@ public:
 	Zombie(Model_3DS model, Vector position)
 		: model_zombie(model),
 		zombiePosition(position),
-		zombieBoundingBox(position - Vector(1, 3.5, 1), position + Vector(1, 3, 1))
+		zombieBoundingBox(position - Vector(1, 3.5, 1), position + Vector(1, 3, 1)),
+		zombieAngle(0),
+		damage(25)
 	{
 	}
 };
@@ -265,6 +289,7 @@ public:
 	Vector playerPosition;
 	BoundingBox playerBoundingBox;
 	GLdouble playerAngle;
+	int health;
 
 	Player()
 	{
@@ -274,7 +299,8 @@ public:
 		: model_player(model),
 		playerPosition(position),
 		playerBoundingBox(position - Vector(1, 1, 1), position + Vector(1, 1, 1)),
-		playerAngle(0)
+		playerAngle(0),
+		health(100)
 	{
 	}
 };
@@ -303,7 +329,7 @@ public:
 // Global Variables
 Scene1 scene1;
 Scene2 scene2;
-int currentScene = 2;
+int currentScene = 1;
 
 int WIDTH = 1280;
 int HEIGHT = 720;
@@ -356,6 +382,10 @@ bool isJumping = false;
 float verticalVelocity = 0;
 float jumpTime = 0;
 float gravity = 9.8;
+
+// For handling attack cooldown
+float lastHitTime = 0;
+float hitCooldown = 1.0f;
 
 // Config
 void InitLightSource() {
@@ -500,65 +530,6 @@ void LoadAssets() {
 	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
 }
 
-// Controls
-void KeyboardDown(unsigned char button, int x, int y) {
-	keys[button] = true;
-
-	if (button == 27) {  // Equivalent to ESC key
-		exit(0);
-	}
-	else if (button == '1') {
-		cameraMode = FIRST_PERSON;
-	}
-	else if (button == '2') {
-		cameraMode = THIRD_PERSON;
-	}
-	else if (button == ' ' && !isJumping) {
-		isJumping = true;
-		verticalVelocity = 5;
-		jumpTime = 0;
-	}
-}
-void KeyboardUp(unsigned char button, int x, int y) {
-	keys[button] = false;
-}
-void MouseMoved(int x, int y) {
-	// Calculate mouse movement since last frame
-	int centerX = WIDTH / 2;
-	int centerY = HEIGHT / 2;
-	int deltaX = x - centerX;
-	int deltaY = y - centerY;
-
-	// Adjust camera angles
-	float sensitivity = 0.005f;  // Adjust as needed
-	cameraYaw -= deltaX * sensitivity;
-	cameraPitch -= deltaY * sensitivity;
-
-	if (cameraMode == THIRD_PERSON) {
-		// Limit pitch to avoid flipping the camera and looking under the ground
-		float upperPitchLimit = M_PI / 6;  // Adjust as needed
-		float lowerPitchLimit = -M_PI / 12;  // Adjust as needed
-		if (cameraPitch < lowerPitchLimit) cameraPitch = lowerPitchLimit;
-		if (cameraPitch > upperPitchLimit) cameraPitch = upperPitchLimit;
-	}
-	else if (cameraMode == FIRST_PERSON) {
-		// Limit pitch to avoid flipping the camera and looking under the ground
-		float pitchLimit = M_PI / 2.5;  // Adjust as needed
-		if (cameraPitch < -pitchLimit) cameraPitch = -pitchLimit;
-		if (cameraPitch > pitchLimit) cameraPitch = pitchLimit;
-	}
-
-	// Update player's rotation to match the camera's yaw angle
-	if (currentScene == 1) {
-        scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
-    } else if (currentScene == 2) {
-        scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
-    }
-
-	// Warp mouse cursor back to the center of the window
-	glutWarpPointer(centerX, centerY);
-}
-
 // Drawing
 void drawGround() {
 	glDisable(GL_LIGHTING);	// Disable lighting 
@@ -686,6 +657,39 @@ void drawScore(int score) {
 
 	glMatrixMode(GL_MODELVIEW);
 }
+void drawHealth(float health) {
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0, 1, 0, 1);
+
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	// Set the color of the health bar based on the player's health
+	if (health > 0.25) {
+		glColor3f(0, 1, 0);  // Green color for health greater than 25%
+	}
+	else {
+		glColor3f(1, 0, 0);  // Red color for health 25% or less
+	}
+
+	// Draw the health bar
+	glBegin(GL_QUADS);
+	glVertex2f(0.01f, 0.95f);  // Bottom left corner
+	glVertex2f(0.01f + health * 0.1f, 0.95f);  // Bottom right corner, reduced multiplier
+	glVertex2f(0.01f + health * 0.1f, 0.98f);  // Top right corner, reduced multiplier
+	glVertex2f(0.01f, 0.98f);  // Top left corner
+	glEnd();
+
+	glPopMatrix();
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+
+	glMatrixMode(GL_MODELVIEW);
+}
 
 // Update
 void UpdateFirstScene(float deltaTime) {
@@ -733,11 +737,6 @@ void UpdateFirstScene(float deltaTime) {
 	}
 	for (auto& medicine : scene1.medicines) {
 		if (scene1.player.playerBoundingBox.intersects(medicine.medicineBoundingBox)) {
-			scene1.player.playerPosition = previousPlayerPosition;
-		}
-	}
-	for (auto& zombie : scene1.zombies) {
-		if (scene1.player.playerBoundingBox.intersects(zombie.zombieBoundingBox)) {
 			scene1.player.playerPosition = previousPlayerPosition;
 		}
 	}
@@ -794,6 +793,42 @@ void UpdateFirstScene(float deltaTime) {
 		scene1.player.playerPosition.y -= gravity * deltaTime;
 		if (scene1.player.playerPosition.y < 0) scene1.player.playerPosition.y = 0;  // Prevent the player from going below the ground
 	}
+
+	// Make zombies move towards the player
+	float zombieSpeed = 0.02;
+	float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+	for (auto& zombie : scene1.zombies) {
+		Vector direction = scene1.player.playerPosition - zombie.zombiePosition;  // Calculate direction towards player
+		direction.y = 0;  // Remove the vertical component
+		direction.normalize();  // Normalize the direction
+		zombie.zombiePosition += direction * zombieSpeed;  // Move the zombie towards the player
+
+		// Update the zombie's bounding box
+		zombie.zombieBoundingBox.minPoint = zombie.zombiePosition - Vector(1, 1, 1);
+		zombie.zombieBoundingBox.maxPoint = zombie.zombiePosition + Vector(1, 1, 1);
+
+		// Make the zombie face the direction it's moving
+		zombie.zombieAngle = atan2(direction.x, direction.z) * (180.0 / M_PI);  // Convert from radians to degrees
+
+		// Check if the zombie hits the player and enough time has passed since the last hit
+		if (scene1.player.playerBoundingBox.intersects(zombie.zombieBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
+			// Decrease player's health
+			scene1.player.health -= zombie.damage;
+
+			// Prevent the player from moving through the zombie
+			Vector pushBackDirection = scene1.player.playerPosition - zombie.zombiePosition;
+			pushBackDirection.y = 0;  // Remove the vertical component
+			pushBackDirection.normalize();
+			scene1.player.playerPosition = previousPlayerPosition + pushBackDirection * 0.1f; // Adjust the multiplier as needed
+
+			// Update the player's bounding box
+			scene1.player.playerBoundingBox.minPoint = scene1.player.playerPosition - Vector(1, 1, 1);
+			scene1.player.playerBoundingBox.maxPoint = scene1.player.playerPosition + Vector(1, 1, 1);
+
+			// Update the last hit time
+			lastHitTime = currentTime;
+		}
+	}
 }
 void UpdateSecondScene(float deltaTime) {
 	Vector previousPlayerPosition = scene2.player.playerPosition;
@@ -843,11 +878,6 @@ void UpdateSecondScene(float deltaTime) {
 	}
 	for (auto& medkit : scene2.medkits) {
 		if (scene2.player.playerBoundingBox.intersects(medkit.medkitBoundingBox)) {
-			scene2.player.playerPosition = previousPlayerPosition;
-		}
-	}
-	for (auto& ghost : scene2.ghosts) {
-		if (scene2.player.playerBoundingBox.intersects(ghost.ghostBoundingBox)) {
 			scene2.player.playerPosition = previousPlayerPosition;
 		}
 	}
@@ -903,6 +933,42 @@ void UpdateSecondScene(float deltaTime) {
 		// If the player is not jumping but is above the ground, apply gravity
 		scene2.player.playerPosition.y -= gravity * deltaTime;
 		if (scene2.player.playerPosition.y < 0) scene2.player.playerPosition.y = 0;  // Prevent the player from going below the ground
+	}
+
+	// Make ghosts move towards the player
+	float ghostSpeed = 0.02;
+	float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+	for (auto& ghost : scene2.ghosts) {
+		Vector direction = scene2.player.playerPosition - ghost.ghostPosition;  // Calculate direction towards player
+		direction.y = 0;  // Remove the vertical component
+		direction.normalize();  // Normalize the direction
+		ghost.ghostPosition += direction * ghostSpeed;  // Move the ghost towards the player
+
+		// Update the ghost's bounding box
+		ghost.ghostBoundingBox.minPoint = ghost.ghostPosition - Vector(1, 1, 1);
+		ghost.ghostBoundingBox.maxPoint = ghost.ghostPosition + Vector(1, 1, 1);
+
+		// Make the ghost face the direction it's moving
+		ghost.ghostAngle = atan2(direction.x, direction.z) * (180.0 / M_PI);  // Convert from radians to degrees
+
+		// Check if the ghost hits the player and enough time has passed since the last hit
+		if (scene2.player.playerBoundingBox.intersects(ghost.ghostBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
+			// Decrease player's health
+			scene2.player.health -= ghost.damage;
+
+			// Prevent the player from moving through the ghost
+			Vector pushBackDirection = scene2.player.playerPosition - ghost.ghostPosition;
+			pushBackDirection.y = 0;  // Remove the vertical component
+			pushBackDirection.normalize();
+			scene2.player.playerPosition = previousPlayerPosition + pushBackDirection * 0.1f; // Adjust the multiplier as needed
+
+			// Update the player's bounding box
+			scene2.player.playerBoundingBox.minPoint = scene2.player.playerPosition - Vector(1, 1, 1);
+			scene2.player.playerBoundingBox.maxPoint = scene2.player.playerPosition + Vector(1, 1, 1);
+
+			// Update the last hit time
+			lastHitTime = currentTime;
+		}
 	}
 }
 void Update() {
@@ -960,6 +1026,9 @@ void DisplayFirstScene(void) {
 	drawTime(remainingTime);
 	*/
 
+	// Draw Health
+	drawHealth(scene1.player.health);
+
 	// Draw Score
 	drawScore(currentScore);
 
@@ -1016,6 +1085,7 @@ void DisplayFirstScene(void) {
 	for (auto& zombie : scene1.zombies) {
 		glPushMatrix();
 		glTranslatef(zombie.zombiePosition.x, zombie.zombiePosition.y, zombie.zombiePosition.z);
+		glRotatef(zombie.zombieAngle, 0, 1, 0);
 		glRotatef(90.f, 1, 0, 0);
 		glRotatef(270.f, 0, 0, 1);
 		glScaled(3, 3, 3);
@@ -1078,6 +1148,9 @@ void DisplaySecondScene(void) {
 	drawTime(remainingTime);
 	*/
 
+	// Draw Health
+	drawHealth(scene2.player.health);
+
 	// Draw Score
 	drawScore(currentScore);
 
@@ -1100,17 +1173,19 @@ void DisplaySecondScene(void) {
 	model_streetlamp.Draw();
 	glPopMatrix();
 
-	// Draw Ghost
+	// Draw Ghosts
 	for (auto& ghost : scene2.ghosts) {
 		glPushMatrix();
 		glTranslatef(ghost.ghostPosition.x, ghost.ghostPosition.y, ghost.ghostPosition.z);
-		glRotatef(130, 0, 1, 0);
+		glRotatef(ghost.ghostAngle, 0, 1, 0);
+		//glRotatef(120, 0, 1, 0);  // Align the model with the positive x-axis
+		//glRotatef(130, 0, 1, 0);
 		glScaled(0.03, 0.03, 0.03);
 		ghost.model_ghost.Draw();
 		glPopMatrix();
 	}
 
-	// Draw Medkit
+	// Draw Medkits
 	for (auto& medkit : scene2.medkits) {
 		glPushMatrix();
 		glTranslatef(medkit.medkitPosition.x, medkit.medkitPosition.y, medkit.medkitPosition.z);
@@ -1120,7 +1195,7 @@ void DisplaySecondScene(void) {
 		glPopMatrix();
 	}
 
-	// Draw Jeep
+	// Draw Jeeps
 	for (auto& jeep : scene2.jeeps) {
 		glPushMatrix();
 		glTranslatef(jeep.jeepPosition.x, jeep.jeepPosition.y, jeep.jeepPosition.z);
@@ -1130,8 +1205,8 @@ void DisplaySecondScene(void) {
 		jeep.model_jeep.Draw();
 		glPopMatrix();
 	}
-
-	// Draw Fence
+	
+	// Draw Fences
 	for (auto& fence : scene2.fences) {
 		glPushMatrix();
 		glTranslatef(fence.fencePosition.x, fence.fencePosition.y, fence.fencePosition.z);
@@ -1164,6 +1239,79 @@ void DisplaySecondScene(void) {
 
 	glutSwapBuffers();
 }
+void SwitchScene() {
+	if (currentScene == 1) {
+		currentScene = 2;
+		glutDisplayFunc(DisplaySecondScene);
+	}
+	else if (currentScene == 2) {
+		currentScene = 1;
+		glutDisplayFunc(DisplayFirstScene);
+	}
+}
+
+// Controls
+void KeyboardDown(unsigned char button, int x, int y) {
+	keys[button] = true;
+
+	if (button == 27) {  // Equivalent to ESC key
+		exit(0);
+	}
+	else if (button == '1') {
+		cameraMode = FIRST_PERSON;
+	}
+	else if (button == '2') {
+		cameraMode = THIRD_PERSON;
+	}
+	else if (button == ' ' && !isJumping) {
+		isJumping = true;
+		verticalVelocity = 5;
+		jumpTime = 0;
+	}
+	else if (button == 'v') {
+		SwitchScene();
+	}
+}
+void KeyboardUp(unsigned char button, int x, int y) {
+	keys[button] = false;
+}
+void MouseMoved(int x, int y) {
+	// Calculate mouse movement since last frame
+	int centerX = WIDTH / 2;
+	int centerY = HEIGHT / 2;
+	int deltaX = x - centerX;
+	int deltaY = y - centerY;
+
+	// Adjust camera angles
+	float sensitivity = 0.005f;  // Adjust as needed
+	cameraYaw -= deltaX * sensitivity;
+	cameraPitch -= deltaY * sensitivity;
+
+	if (cameraMode == THIRD_PERSON) {
+		// Limit pitch to avoid flipping the camera and looking under the ground
+		float upperPitchLimit = M_PI / 6;  // Adjust as needed
+		float lowerPitchLimit = -M_PI / 12;  // Adjust as needed
+		if (cameraPitch < lowerPitchLimit) cameraPitch = lowerPitchLimit;
+		if (cameraPitch > upperPitchLimit) cameraPitch = upperPitchLimit;
+	}
+	else if (cameraMode == FIRST_PERSON) {
+		// Limit pitch to avoid flipping the camera and looking under the ground
+		float pitchLimit = M_PI / 2.5;  // Adjust as needed
+		if (cameraPitch < -pitchLimit) cameraPitch = -pitchLimit;
+		if (cameraPitch > pitchLimit) cameraPitch = pitchLimit;
+	}
+
+	// Update player's rotation to match the camera's yaw angle
+	if (currentScene == 1) {
+		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+	else if (currentScene == 2) {
+		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+
+	// Warp mouse cursor back to the center of the window
+	glutWarpPointer(centerX, centerY);
+}
 
 // Main
 void main(int argc, char** argv) {
@@ -1174,7 +1322,7 @@ void main(int argc, char** argv) {
 	glutInitWindowPosition(100, 150);
 	glutCreateWindow(title);
 
-	glutDisplayFunc(DisplaySecondScene);
+	glutDisplayFunc(DisplayFirstScene);
 	glutKeyboardFunc(KeyboardDown);
 	glutKeyboardUpFunc(KeyboardUp);
 	glutReshapeFunc(Reshape);
