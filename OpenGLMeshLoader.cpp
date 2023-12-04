@@ -57,11 +57,13 @@ public:
 	BoundingBox(Vector _minPoint, Vector _maxPoint) : minPoint(_minPoint), maxPoint(_maxPoint) {}
 
 	// Check if this bounding box intersects with another one
+	// Modified to only check for intersection in the x and z axes
+	// ignoring the verticality of the bounding boxes.
 	bool intersects(const BoundingBox& other) const {
 		return (minPoint.x <= other.maxPoint.x && maxPoint.x >= other.minPoint.x) &&
-			(minPoint.y <= other.maxPoint.y && maxPoint.y >= other.minPoint.y) &&
 			(minPoint.z <= other.maxPoint.z && maxPoint.z >= other.minPoint.z);
 	}
+
 };
 enum CameraMode { FIRST_PERSON, THIRD_PERSON };
 
@@ -85,21 +87,12 @@ int cameraZoom = 0;
 int lastMouseX = -1, lastMouseY = -1;
 float cameraYaw = 0, cameraPitch = 0;
 
+// Unused for now
 Model_3DS model_car;
-
 Model_3DS model_spaceCraft;
-Model_3DS model_tree;
-Model_3DS model_moster;
 Model_3DS model_statue;
-Model_3DS model_medkit;
-Model_3DS model_medicine2;
 Model_3DS model_medicine3;
-Model_3DS model_rocks;
-Model_3DS model_house;
-Model_3DS model_bunker;
 Model_3DS model_zombie2;
-Model_3DS model_fence;
-Model_3DS model_streetlamp;
 
 // Player
 Model_3DS model_player;
@@ -107,11 +100,20 @@ Vector playerPosition(0, 0, 10);
 BoundingBox playerBoundingBox(playerPosition - Vector(1, 1, 1), playerPosition + Vector(1, 1, 1)); // 2x2x2 cube around the player (for collision detection)
 GLdouble playerAngle = 0;
 
-// Jeep
-Model_3DS model_jeep;
-Vector jeepPosition(25, 7, -25);
-float jeepBoundingBoxOffsetZ = 12;  // Define the offset in the positive z direction to move the bounding box closer to the jeep
-BoundingBox jeepBoundingBox(jeepPosition - Vector(1, 10, 1) + Vector(0, 0, jeepBoundingBoxOffsetZ), jeepPosition + Vector(10, 10, 10) + Vector(0, 0, jeepBoundingBoxOffsetZ));
+// First Environment Models
+
+// Rocks
+Model_3DS model_rocks;
+Vector rocksPosition(20, 0, 32);
+
+// Tree
+Model_3DS model_tree;
+
+// Medicine
+Model_3DS model_medicine2;
+
+// Bunker
+Model_3DS model_bunker;
 
 // Zombie
 Model_3DS model_zombie;
@@ -119,18 +121,44 @@ Vector zombiePosition(20, 3.3, 10);
 BoundingBox zombieBoundingBox(zombiePosition - Vector(1, 1, 1), zombiePosition + Vector(1, 1, 1));
 GLdouble zombieAngle = 0;
 
+// Second Environment Models
+
+// Jeep
+Model_3DS model_jeep;
+Vector jeepPosition(25, 7, -25);
+float jeepBoundingBoxOffsetZ = 8;  // Define the offset in the positive z direction to move the bounding box closer to the jeep
+BoundingBox jeepBoundingBox(jeepPosition - Vector(0.5, 10, 2) + Vector(0, 0, jeepBoundingBoxOffsetZ), jeepPosition + Vector(10, 10, 17) + Vector(0, 0, jeepBoundingBoxOffsetZ));
+
+// Fence
+Model_3DS model_fence;
+
+// Medkit
+Model_3DS model_medkit;
+
+// House
+Model_3DS model_house;
+
+// Ghost
+Model_3DS model_ghost;
+
+// Streetlamp
+Model_3DS model_streetlamp;
+
+//================================================================================================//
+
 bool keys[256];
 int totalGameTime = 30;
 int startTime;
 int currentScore = 0;
 
+// For handling jumping
 auto lastFrameTime = std::chrono::high_resolution_clock::now();
 bool isJumping = false;
 float verticalVelocity = 0;
 float jumpTime = 0;
 float gravity = 9.8;
 
-// Configs
+// Config Functions
 void InitLightSource() {
 	// Enable Lighting for this OpenGL Program
 	glEnable(GL_LIGHTING);
@@ -205,7 +233,7 @@ void Init(void) {
 	glEnable(GL_NORMALIZE);
 }
 
-// Environment 
+// Draw Environment Models
 void drawGround() {
 	glDisable(GL_LIGHTING);	// Disable lighting 
 
@@ -275,7 +303,7 @@ void drawBoundingBox(const BoundingBox& box) {
 	glEnable(GL_LIGHTING);
 }
 
-// HUD
+// Draw HUD
 void drawTime(int remainingTime) {
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
@@ -397,7 +425,7 @@ void DisplayGame(void) {
 	glTranslatef(0, 0.0, 20);
 	glRotatef(130, 0, 1,0);
 	glScaled(0.03, 0.03, 0.03);
-	model_moster.Draw();
+	model_ghost.Draw();
 	glPopMatrix();
 
 	// Draw Surrounding Statues (Walls)
@@ -438,9 +466,9 @@ void DisplayGame(void) {
 
 	// Draw Rocks
 	glPushMatrix();
-	glTranslatef(20, 0, 32);
+	glTranslatef(rocksPosition.x, rocksPosition.y, rocksPosition.z);
 	glRotatef(130, 0, 1, 0);
-	glScaled(0.05, 0.05, 0.05);
+	glScaled(0.12, 0.12, 0.12);
 	model_rocks.Draw();
 	glPopMatrix();
 
@@ -600,6 +628,9 @@ void Update() {
 	if (playerBoundingBox.intersects(jeepBoundingBox)) {
 		playerPosition = previousPlayerPosition;
 	}
+	else if (playerBoundingBox.intersects(zombieBoundingBox)) {
+		playerPosition = previousPlayerPosition;
+	}
 
 	// Update camera to follow player
 	if (cameraMode == THIRD_PERSON) {
@@ -683,6 +714,8 @@ void Reshape(int w, int h) {
 // Load Assets
 void LoadAssets() {
 	// Loading Model files
+
+	/*
 	model_car.Load("Models/car/sportsCar.3ds");
 	model_car.Materials[1].tex.BuildColorTexture(0, 0, 0);
 	model_car.Materials[2].tex.BuildColorTexture(0, 0, 0);
@@ -691,11 +724,15 @@ void LoadAssets() {
 	model_car.Materials[6].tex.BuildColorTexture(0, 0, 0);
 	model_car.Materials[3].tex.BuildColorTexture(129, 12, 12);
 	model_car.rot.x = -90.0f;
-	/*m.rot.y = 30.0f;
-	 m.rot.z = 0.0f;*/
+	// m.rot.y = 30.0f;
+	// m.rot.z = 0.0f;
 	model_car.pos.z = -2.3f;
 	// m.pos.y = 0.0f;
 	// m.pos.z = 0.0f;
+	*/
+
+	// model_spaceCraft.Load("Models/rocket/Soyuz.3ds");
+	// model_statue.Load("Models/obstacles/Acient_Statue_02.3ds");
 
 	model_jeep.Load("Models/jeep/jeep.3ds");
 
@@ -703,13 +740,11 @@ void LoadAssets() {
 	model_player.Load("Models/player/Soldier US N260412.3ds");
 	//model_player.Materials[5].tex.BuildColorTexture(0, 0, 0);
 
-	model_moster.Load("Models/monster/death.3ds");
-	//model_moster.Materials[0].tex.BuildColorTexture(0, 0, 0);
+	model_ghost.Load("Models/monster/death.3ds");
+	//model_ghost.Materials[0].tex.BuildColorTexture(0, 0, 0);
 
-	model_statue.Load("Models/obstacles/Acient_Statue_02.3ds");
 	model_medkit.Load("Models/medicine/medicines/Box.3ds");
 	model_medicine2.Load("Models/medicine/medicines/Bottle.3ds");
-	//model_spaceCraft.Load("Models/rocket/Soyuz.3ds");
 	model_rocks.Load("Models/obstacles/Campfire.3ds");
 	model_house.Load("Models/house/house.3ds");
 	model_bunker.Load("Models/bunker/Ruin.3ds");
