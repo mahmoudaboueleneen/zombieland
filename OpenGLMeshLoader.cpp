@@ -279,22 +279,29 @@ public:
 	}
 };
 
-Player player;
+// Scene Classes
+class Scene1 {
+public:
+	Player player;
+	Bunker bunker;
+	std::vector<Rock> rocks;
+	std::vector<Tree> trees;
+	std::vector<Medicine> medicines;
+	std::vector<Zombie>	zombies;
+};
+class Scene2 {
+public:
+	Player player;
+	House house;
+	std::vector<Jeep> jeeps;
+	std::vector<Fence> fences;
+	std::vector<Medkit> medkits;
+	std::vector<Ghost> ghosts;
+};
 
-// Scene 1
-Bunker bunker;
-std::vector<Rock> rocks;
-std::vector<Tree> trees;
-std::vector<Medicine> medicines;
-std::vector<Zombie> zombies;
-
-// Scene 2
-House house;
-std::vector<Jeep> jeeps;
-std::vector<Fence> fences;
-std::vector<Medkit> medkits;
-std::vector<Ghost> ghosts;
-
+// Global Variables
+Scene1 scene1;
+Scene2 scene2;
 int currentScene = 1;
 
 int WIDTH = 1280;
@@ -1048,22 +1055,21 @@ void main(int argc, char** argv) {
 	Init();
 	LoadAssets();
 
-	// Initialize Player
-	player = Player(model_player, Vector(0, 0, 10));
+	// Initialize First Scene
+	scene1.player = Player(model_player, Vector(0, 0, 10));
+	scene1.bunker = Bunker(model_bunker, Vector(-20, 0, 20));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(20, 0, 32)));
+	scene1.trees.push_back(Tree(model_tree, Vector(10, 0, 0)));
+	scene1.medicines.push_back(Medicine(model_medicine, Vector(14, 0, 20)));
+	scene1.zombies.push_back(Zombie(model_zombie, Vector(20, 3.3, 10)));
 
-	// Initialize Scene 1
-	bunker = Bunker(model_bunker, Vector(-20, 0, 20));
-	rocks.push_back(Rock(model_rocks, Vector(20, 0, 32)));
-	trees.push_back(Tree(model_tree, Vector(10, 0, 0)));
-	medicines.push_back(Medicine(model_medicine, Vector(14, 0, 20)));
-	zombies.push_back(Zombie(model_zombie, Vector(20, 3.3, 10)));
-
-	// Initialize Scene 2
-	house = House(model_house, Vector(-30, 0, -20));
-	jeeps.push_back(Jeep(model_jeep, Vector(25, 7, -25)));
-	fences.push_back(Fence(model_fence, Vector(15, 0, -5)));
-	medkits.push_back(Medkit(model_medkit, Vector(20, 0, 20)));
-	ghosts.push_back(Ghost(model_ghost, Vector(0, 0, 20)));
+	// Initialize Second Scene
+	scene2.player = Player(model_player, Vector(0, 0, 10));
+	scene2.house = House(model_house, Vector(-30, 0, -20));
+	scene2.jeeps.push_back(Jeep(model_jeep, Vector(25, 7, -25)));
+	scene2.fences.push_back(Fence(model_fence, Vector(15, 0, -5)));
+	scene2.medkits.push_back(Medkit(model_medkit, Vector(20, 0, 20)));
+	scene2.ghosts.push_back(Ghost(model_ghost, Vector(0, 0, 20)));
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
