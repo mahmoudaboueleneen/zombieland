@@ -293,6 +293,7 @@ class Scene2 {
 public:
 	Player player;
 	House house;
+	Streetlamp streetlamp;
 	std::vector<Jeep> jeeps;
 	std::vector<Fence> fences;
 	std::vector<Medkit> medkits;
@@ -827,6 +828,9 @@ void UpdateSecondScene(float deltaTime) {
 	if (scene2.player.playerBoundingBox.intersects(scene2.house.houseBoundingBox)) {
 		scene2.player.playerPosition = previousPlayerPosition;
 	}
+	if (scene2.player.playerBoundingBox.intersects(scene2.streetlamp.streetlampBoundingBox)) {
+		scene2.player.playerPosition = previousPlayerPosition;
+	}
 	for (auto& jeep : scene2.jeeps) {
 		if (scene2.player.playerBoundingBox.intersects(jeep.jeepBoundingBox)) {
 			scene2.player.playerPosition = previousPlayerPosition;
@@ -1048,6 +1052,7 @@ void DisplaySecondScene(void) {
 	// Draw Bounding Boxes for testing
 	drawBoundingBox(scene2.player.playerBoundingBox);
 	drawBoundingBox(scene2.house.houseBoundingBox);
+	drawBoundingBox(scene2.streetlamp.streetlampBoundingBox);
 	for (auto& jeep : scene2.jeeps) {
 		drawBoundingBox(jeep.jeepBoundingBox);
 	}
@@ -1085,6 +1090,14 @@ void DisplaySecondScene(void) {
 	glRotatef(-90 + scene2.player.playerAngle, 0, 1, 0);
 	glScaled(0.03, 0.03, 0.03);
 	scene2.player.model_player.Draw();
+	glPopMatrix();
+
+	// Draw Streetlamp
+	glPushMatrix();
+	glTranslatef(scene2.streetlamp.streetlampPosition.x, scene2.streetlamp.streetlampPosition.y, scene2.streetlamp.streetlampPosition.z);
+	glRotatef(0.0f, 1, 0, 0);
+	glScaled(1.4, 1.4, 1.4);
+	model_streetlamp.Draw();
 	glPopMatrix();
 
 	// Draw Ghost
@@ -1183,6 +1196,7 @@ void main(int argc, char** argv) {
 	// Initialize Second Scene
 	scene2.player = Player(model_player, Vector(0, 0, 10));
 	scene2.house = House(model_house, Vector(-30, 0, -20));
+	scene2.streetlamp = Streetlamp(model_streetlamp, Vector(20, 0, -15));
 	scene2.jeeps.push_back(Jeep(model_jeep, Vector(25, 7, -25)));
 	scene2.fences.push_back(Fence(model_fence, Vector(15, 0, -5)));
 	scene2.medkits.push_back(Medkit(model_medkit, Vector(20, 0, 20)));
