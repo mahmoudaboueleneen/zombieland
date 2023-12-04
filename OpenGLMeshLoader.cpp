@@ -105,6 +105,8 @@ GLdouble playerAngle = 0;
 // Rocks
 Model_3DS model_rocks;
 Vector rocksPosition(20, 0, 32);
+Vector rockBoundingBoxOffset = Vector(-3, 0, -7);  // Offset to move the bounding box closer to the model
+BoundingBox rocksBoundingBox(rocksPosition - Vector(1, 1, 1) + rockBoundingBoxOffset, rocksPosition + Vector(10, 10, 10) + rockBoundingBoxOffset);
 
 // Tree
 Model_3DS model_tree;
@@ -126,8 +128,8 @@ GLdouble zombieAngle = 0;
 // Jeep
 Model_3DS model_jeep;
 Vector jeepPosition(25, 7, -25);
-float jeepBoundingBoxOffsetZ = 8;  // Define the offset in the positive z direction to move the bounding box closer to the jeep
-BoundingBox jeepBoundingBox(jeepPosition - Vector(0.5, 10, 2) + Vector(0, 0, jeepBoundingBoxOffsetZ), jeepPosition + Vector(10, 10, 17) + Vector(0, 0, jeepBoundingBoxOffsetZ));
+Vector jeepBoundingBoxOffset = Vector(0, 0, 8);  // Offset to move the bounding box closer to the model
+BoundingBox jeepBoundingBox(jeepPosition - Vector(0.5, 10, 2) + jeepBoundingBoxOffset, jeepPosition + Vector(10, 10, 17) + jeepBoundingBoxOffset);
 
 // Fence
 Model_3DS model_fence;
@@ -379,6 +381,7 @@ void DisplayGame(void) {
 	drawBoundingBox(playerBoundingBox);
 	drawBoundingBox(jeepBoundingBox);
 	drawBoundingBox(zombieBoundingBox);
+	drawBoundingBox(rocksBoundingBox);
 
 	// Draw Time 
 	/*
@@ -629,6 +632,9 @@ void Update() {
 		playerPosition = previousPlayerPosition;
 	}
 	else if (playerBoundingBox.intersects(zombieBoundingBox)) {
+		playerPosition = previousPlayerPosition;
+	}
+	else if (playerBoundingBox.intersects(rocksBoundingBox)) {
 		playerPosition = previousPlayerPosition;
 	}
 
