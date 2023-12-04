@@ -385,7 +385,7 @@ float gravity = 9.8;
 
 // For handling attack cooldown
 float lastHitTime = 0;
-float hitCooldown = 1.0f;
+float hitCooldown = 0.75f;
 
 // Config
 void InitLightSource() {
@@ -528,6 +528,13 @@ void LoadAssets() {
 	// Loading Texture files
 	tex_ground.Load("Textures/ground.bmp");
 	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
+}
+
+// Misc
+void DisableControls() {
+	glutKeyboardFunc(NULL);
+	glutKeyboardUpFunc(NULL);
+	glutPassiveMotionFunc(NULL);
 }
 
 // Drawing
@@ -715,297 +722,6 @@ void drawHealth(float health) {
 	glPopMatrix();
 
 	glMatrixMode(GL_MODELVIEW);
-}
-
-// Update
-void UpdateFirstScene(float deltaTime) {
-	Vector previousPlayerPosition = scene1.player.playerPosition;
-
-	float playerSpeed = 0.1;
-
-	if (keys['w'] || keys['W']) {
-		scene1.player.playerPosition.x += playerSpeed * cos(cameraYaw);
-		scene1.player.playerPosition.z -= playerSpeed * sin(cameraYaw);
-		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
-	}
-	if (keys['s'] || keys['S']) {
-		scene1.player.playerPosition.x -= playerSpeed * cos(cameraYaw);
-		scene1.player.playerPosition.z += playerSpeed * sin(cameraYaw);
-		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
-	}
-	if (keys['a'] || keys['A']) {
-		scene1.player.playerPosition.x -= playerSpeed * sin(cameraYaw);
-		scene1.player.playerPosition.z -= playerSpeed * cos(cameraYaw);
-		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
-	}
-	if (keys['d'] || keys['D']) {
-		scene1.player.playerPosition.x += playerSpeed * sin(cameraYaw);
-		scene1.player.playerPosition.z += playerSpeed * cos(cameraYaw);
-		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
-	}
-
-	scene1.player.playerBoundingBox.minPoint = scene1.player.playerPosition - Vector(1, 1, 1);
-	scene1.player.playerBoundingBox.maxPoint = scene1.player.playerPosition + Vector(1, 1, 1);
-
-	// Check for collisions
-	if (scene1.player.playerBoundingBox.intersects(scene1.bunker.bunkerBoundingBox)) {
-		scene1.player.playerPosition = previousPlayerPosition;
-	}
-	for (auto& rock : scene1.rocks) {
-		if (scene1.player.playerBoundingBox.intersects(rock.rocksBoundingBox)) {
-			scene1.player.playerPosition = previousPlayerPosition;
-		}
-	}
-	for (auto& tree : scene1.trees) {
-		if (scene1.player.playerBoundingBox.intersects(tree.treeBoundingBox)) {
-			scene1.player.playerPosition = previousPlayerPosition;
-		}
-	}
-	for (auto& medicine : scene1.medicines) {
-		if (scene1.player.playerBoundingBox.intersects(medicine.medicineBoundingBox)) {
-			scene1.player.playerPosition = previousPlayerPosition;
-		}
-	}
-
-	// Update camera to follow player
-	if (cameraMode == THIRD_PERSON) {
-		// Calculate the camera's position based on the player's position and the camera angles
-		float distanceBehindPlayer = 3.5;
-		float cameraHeight = 5.5;
-		float cameraLeftOffset = 0;
-		Eye.x = scene1.player.playerPosition.x - cos(cameraYaw) * distanceBehindPlayer - sin(cameraYaw) * cameraLeftOffset;
-		Eye.y = scene1.player.playerPosition.y + cameraHeight;
-		Eye.z = scene1.player.playerPosition.z + sin(cameraYaw) * distanceBehindPlayer + cos(cameraYaw) * cameraLeftOffset;
-
-		// Make the camera look forward from the player's perspective
-		float lookAheadDistance = 5;
-		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
-		At.y = Eye.y + sin(cameraPitch) * lookAheadDistance;
-		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
-	}
-	else if (cameraMode == FIRST_PERSON) {
-		// Position the camera at the player's eye level
-		Eye.x = scene1.player.playerPosition.x;
-		Eye.y = scene1.player.playerPosition.y + 5;
-		Eye.z = scene1.player.playerPosition.z;
-
-		// Calculate the direction the player is facing
-		float rad = scene1.player.playerAngle * (M_PI / 180);  // Convert angle to radians
-
-		// Calculate the direction the camera is looking
-		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch);
-		At.y = Eye.y + sin(cameraPitch);
-		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch);
-	}
-
-	if (isJumping) {
-		// Apply the vertical velocity to the player's position
-		scene1.player.playerPosition.y += verticalVelocity * deltaTime;  // deltaTime is the time elapsed since the last frame
-
-		// Decrease the vertical velocity over time (simulate gravity)
-		verticalVelocity -= gravity * deltaTime;  // gravity is the acceleration due to gravity
-
-		// Increase the jump time
-		jumpTime += deltaTime;
-
-		// End the jump after a certain time or when the player hits the ground
-		if (scene1.player.playerPosition.y <= 0) {  // Adjust this condition as needed
-			isJumping = false;
-			verticalVelocity = 0;  // Reset the vertical velocity
-		}
-	}
-	else if (scene1.player.playerPosition.y > 0) {
-		// If the player is not jumping but is above the ground, apply gravity
-		scene1.player.playerPosition.y -= gravity * deltaTime;
-		if (scene1.player.playerPosition.y < 0) scene1.player.playerPosition.y = 0;  // Prevent the player from going below the ground
-	}
-
-	// Make zombies move towards the player
-	float zombieSpeed = 0.02;
-	float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
-	for (auto& zombie : scene1.zombies) {
-		Vector direction = scene1.player.playerPosition - zombie.zombiePosition;
-		direction.y = 0;
-		direction.normalize();
-		zombie.zombiePosition += direction * zombieSpeed;
-
-		zombie.zombieBoundingBox.minPoint = zombie.zombiePosition - Vector(1, 1, 1);
-		zombie.zombieBoundingBox.maxPoint = zombie.zombiePosition + Vector(1, 1, 1);
-
-		zombie.zombieAngle = atan2(direction.x, direction.z) * (180.0 / M_PI);  // Convert from radians to degrees
-
-		// Check if the zombie hits the player and enough time has passed since the last hit
-		if (scene1.player.playerBoundingBox.intersects(zombie.zombieBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
-			scene1.player.health -= zombie.damage;
-
-			if (scene1.player.health < 0) {
-				scene1.player.health = 0;
-			}
-
-			Vector pushBackDirection = scene1.player.playerPosition - zombie.zombiePosition;
-			pushBackDirection.y = 0;
-			pushBackDirection.normalize();
-			scene1.player.playerPosition = previousPlayerPosition + pushBackDirection * 0.1f; // Adjust the multiplier as needed
-
-			scene1.player.playerBoundingBox.minPoint = scene1.player.playerPosition - Vector(1, 1, 1);
-			scene1.player.playerBoundingBox.maxPoint = scene1.player.playerPosition + Vector(1, 1, 1);
-
-			lastHitTime = currentTime;
-		}
-	}
-}
-void UpdateSecondScene(float deltaTime) {
-	Vector previousPlayerPosition = scene2.player.playerPosition;
-
-	float playerSpeed = 0.1;
-
-	if (keys['w'] || keys['W']) {
-		scene2.player.playerPosition.x += playerSpeed * cos(cameraYaw);
-		scene2.player.playerPosition.z -= playerSpeed * sin(cameraYaw);
-		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
-	}
-	if (keys['s'] || keys['S']) {
-		scene2.player.playerPosition.x -= playerSpeed * cos(cameraYaw);
-		scene2.player.playerPosition.z += playerSpeed * sin(cameraYaw);
-		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
-	}
-	if (keys['a'] || keys['A']) {
-		scene2.player.playerPosition.x -= playerSpeed * sin(cameraYaw);
-		scene2.player.playerPosition.z -= playerSpeed * cos(cameraYaw);
-		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
-	}
-	if (keys['d'] || keys['D']) {
-		scene2.player.playerPosition.x += playerSpeed * sin(cameraYaw);
-		scene2.player.playerPosition.z += playerSpeed * cos(cameraYaw);
-		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
-	}
-
-	scene2.player.playerBoundingBox.minPoint = scene2.player.playerPosition - Vector(1, 1, 1);
-	scene2.player.playerBoundingBox.maxPoint = scene2.player.playerPosition + Vector(1, 1, 1);
-
-	// Check for collisions
-	if (scene2.player.playerBoundingBox.intersects(scene2.house.houseBoundingBox)) {
-		scene2.player.playerPosition = previousPlayerPosition;
-	}
-	if (scene2.player.playerBoundingBox.intersects(scene2.streetlamp.streetlampBoundingBox)) {
-		scene2.player.playerPosition = previousPlayerPosition;
-	}
-	for (auto& jeep : scene2.jeeps) {
-		if (scene2.player.playerBoundingBox.intersects(jeep.jeepBoundingBox)) {
-			scene2.player.playerPosition = previousPlayerPosition;
-		}
-	}
-	for (auto& fence : scene2.fences) {
-		if (scene2.player.playerBoundingBox.intersects(fence.fenceBoundingBox)) {
-			scene2.player.playerPosition = previousPlayerPosition;
-		}
-	}
-	for (auto& medkit : scene2.medkits) {
-		if (scene2.player.playerBoundingBox.intersects(medkit.medkitBoundingBox)) {
-			scene2.player.playerPosition = previousPlayerPosition;
-		}
-	}
-
-	// Update camera to follow player
-	if (cameraMode == THIRD_PERSON) {
-		// Calculate the camera's position based on the player's position and the camera angles
-		float distanceBehindPlayer = 3.5;
-		float cameraHeight = 5.5;
-		float cameraLeftOffset = 0;
-		Eye.x = scene2.player.playerPosition.x - cos(cameraYaw) * distanceBehindPlayer - sin(cameraYaw) * cameraLeftOffset;
-		Eye.y = scene2.player.playerPosition.y + cameraHeight;
-		Eye.z = scene2.player.playerPosition.z + sin(cameraYaw) * distanceBehindPlayer + cos(cameraYaw) * cameraLeftOffset;
-
-		// Make the camera look forward from the player's perspective
-		float lookAheadDistance = 5;
-		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
-		At.y = Eye.y + sin(cameraPitch) * lookAheadDistance;
-		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
-	}
-	else if (cameraMode == FIRST_PERSON) {
-		// Position the camera at the player's eye level
-		Eye.x = scene2.player.playerPosition.x;
-		Eye.y = scene2.player.playerPosition.y + 5;
-		Eye.z = scene2.player.playerPosition.z;
-
-		// Calculate the direction the player is facing
-		float rad = scene2.player.playerAngle * (M_PI / 180);  // Convert angle to radians
-
-		// Calculate the direction the camera is looking
-		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch);
-		At.y = Eye.y + sin(cameraPitch);
-		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch);
-	}
-
-	if (isJumping) {
-		// Apply the vertical velocity to the player's position
-		scene2.player.playerPosition.y += verticalVelocity * deltaTime;  // deltaTime is the time elapsed since the last frame
-
-		// Decrease the vertical velocity over time (simulate gravity)
-		verticalVelocity -= gravity * deltaTime;  // gravity is the acceleration due to gravity
-
-		// Increase the jump time
-		jumpTime += deltaTime;
-
-		// End the jump after a certain time or when the player hits the ground
-		if (scene2.player.playerPosition.y <= 0) {  // Adjust this condition as needed
-			isJumping = false;
-			verticalVelocity = 0;  // Reset the vertical velocity
-		}
-	}
-	else if (scene2.player.playerPosition.y > 0) {
-		// If the player is not jumping but is above the ground, apply gravity
-		scene2.player.playerPosition.y -= gravity * deltaTime;
-		if (scene2.player.playerPosition.y < 0) scene2.player.playerPosition.y = 0;  // Prevent the player from going below the ground
-	}
-
-	// Make ghosts move towards the player
-	float ghostSpeed = 0.02;
-	float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
-	for (auto& ghost : scene2.ghosts) {
-		Vector direction = scene2.player.playerPosition - ghost.ghostPosition;
-		direction.y = 0;
-		direction.normalize();
-		ghost.ghostPosition += direction * ghostSpeed;
-
-		ghost.ghostBoundingBox.minPoint = ghost.ghostPosition - Vector(1, 1, 1);
-		ghost.ghostBoundingBox.maxPoint = ghost.ghostPosition + Vector(1, 1, 1);
-
-		ghost.ghostAngle = atan2(direction.x, direction.z) * (180.0 / M_PI);  // Convert from radians to degrees
-
-		// Check if the ghost hits the player and enough time has passed since the last hit
-		if (scene2.player.playerBoundingBox.intersects(ghost.ghostBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
-			scene2.player.health -= ghost.damage;
-
-			if (scene2.player.health < 0) {
-				scene2.player.health = 0;
-			}
-
-			Vector pushBackDirection = scene2.player.playerPosition - ghost.ghostPosition;
-			pushBackDirection.y = 0;
-			pushBackDirection.normalize();
-			scene2.player.playerPosition = previousPlayerPosition + pushBackDirection * 0.1f; // Adjust the multiplier as needed
-
-			scene2.player.playerBoundingBox.minPoint = scene2.player.playerPosition - Vector(1, 1, 1);
-			scene2.player.playerBoundingBox.maxPoint = scene2.player.playerPosition + Vector(1, 1, 1);
-
-			lastHitTime = currentTime;
-		}
-	}
-}
-void Update() {
-	auto currentFrameTime = std::chrono::high_resolution_clock::now();
-	float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentFrameTime - lastFrameTime).count();
-	lastFrameTime = currentFrameTime;
-
-	if (currentScene == 1) {
-		UpdateFirstScene(deltaTime);
-	}
-	else if (currentScene == 2) {
-		UpdateSecondScene(deltaTime);
-	}
-
-	glutPostRedisplay();
 }
 
 // Display
@@ -1229,7 +945,7 @@ void DisplaySecondScene(void) {
 		jeep.model_jeep.Draw();
 		glPopMatrix();
 	}
-	
+
 	// Draw Fences
 	for (auto& fence : scene2.fences) {
 		glPushMatrix();
@@ -1272,6 +988,349 @@ void SwitchScene() {
 		currentScene = 1;
 		glutDisplayFunc(DisplayFirstScene);
 	}
+}
+void DisplayDeathScreen() {
+	// Set the clear color to dark red
+	glClearColor(0.3f, 0.0f, 0.0f, 1.0f);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Set the projection matrix to orthographic for 2D rendering
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0, WIDTH, 0, HEIGHT);  // Adjust as needed
+
+	// Set the modelview matrix to identity for 2D rendering
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	// Disable lighting for 2D rendering
+	glDisable(GL_LIGHTING);
+
+	// Set the color to red
+	glColor3f(1, 0, 0);
+
+	// Position the text in the center of the screen
+	glRasterPos2f(WIDTH / 2 - 50, HEIGHT / 2);  // Adjust as needed
+
+	// Render the "YOU DIED" text
+	const char* text = "YOU DIED";
+	int len = strlen(text);
+	for (int i = 0; i < len; i++) {
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, text[i]);
+	}
+
+	// Re-enable lighting
+	glEnable(GL_LIGHTING);
+
+	// Restore the modelview matrix
+	glPopMatrix();
+
+	// Restore the projection matrix
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+
+	// Set the matrix mode back to modelview
+	glMatrixMode(GL_MODELVIEW);
+
+	glutSwapBuffers();
+}
+
+// Update
+void UpdateFirstScene(float deltaTime) {
+	Vector previousPlayerPosition = scene1.player.playerPosition;
+
+	float playerSpeed = 0.1;
+
+	if (keys['w'] || keys['W']) {
+		scene1.player.playerPosition.x += playerSpeed * cos(cameraYaw);
+		scene1.player.playerPosition.z -= playerSpeed * sin(cameraYaw);
+		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+	if (keys['s'] || keys['S']) {
+		scene1.player.playerPosition.x -= playerSpeed * cos(cameraYaw);
+		scene1.player.playerPosition.z += playerSpeed * sin(cameraYaw);
+		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+	if (keys['a'] || keys['A']) {
+		scene1.player.playerPosition.x -= playerSpeed * sin(cameraYaw);
+		scene1.player.playerPosition.z -= playerSpeed * cos(cameraYaw);
+		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+	if (keys['d'] || keys['D']) {
+		scene1.player.playerPosition.x += playerSpeed * sin(cameraYaw);
+		scene1.player.playerPosition.z += playerSpeed * cos(cameraYaw);
+		scene1.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+
+	scene1.player.playerBoundingBox.minPoint = scene1.player.playerPosition - Vector(1, 1, 1);
+	scene1.player.playerBoundingBox.maxPoint = scene1.player.playerPosition + Vector(1, 1, 1);
+
+	// Check for collisions
+	if (scene1.player.playerBoundingBox.intersects(scene1.bunker.bunkerBoundingBox)) {
+		scene1.player.playerPosition = previousPlayerPosition;
+	}
+	for (auto& rock : scene1.rocks) {
+		if (scene1.player.playerBoundingBox.intersects(rock.rocksBoundingBox)) {
+			scene1.player.playerPosition = previousPlayerPosition;
+		}
+	}
+	for (auto& tree : scene1.trees) {
+		if (scene1.player.playerBoundingBox.intersects(tree.treeBoundingBox)) {
+			scene1.player.playerPosition = previousPlayerPosition;
+		}
+	}
+	for (auto& medicine : scene1.medicines) {
+		if (scene1.player.playerBoundingBox.intersects(medicine.medicineBoundingBox)) {
+			scene1.player.playerPosition = previousPlayerPosition;
+		}
+	}
+
+	// Update camera to follow player
+	if (cameraMode == THIRD_PERSON) {
+		// Calculate the camera's position based on the player's position and the camera angles
+		float distanceBehindPlayer = 3.5;
+		float cameraHeight = 5.5;
+		float cameraLeftOffset = 0;
+		Eye.x = scene1.player.playerPosition.x - cos(cameraYaw) * distanceBehindPlayer - sin(cameraYaw) * cameraLeftOffset;
+		Eye.y = scene1.player.playerPosition.y + cameraHeight;
+		Eye.z = scene1.player.playerPosition.z + sin(cameraYaw) * distanceBehindPlayer + cos(cameraYaw) * cameraLeftOffset;
+
+		// Make the camera look forward from the player's perspective
+		float lookAheadDistance = 5;
+		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
+		At.y = Eye.y + sin(cameraPitch) * lookAheadDistance;
+		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
+	}
+	else if (cameraMode == FIRST_PERSON) {
+		// Position the camera at the player's eye level
+		Eye.x = scene1.player.playerPosition.x;
+		Eye.y = scene1.player.playerPosition.y + 5;
+		Eye.z = scene1.player.playerPosition.z;
+
+		// Calculate the direction the player is facing
+		float rad = scene1.player.playerAngle * (M_PI / 180);  // Convert angle to radians
+
+		// Calculate the direction the camera is looking
+		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch);
+		At.y = Eye.y + sin(cameraPitch);
+		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch);
+	}
+
+	if (isJumping) {
+		// Apply the vertical velocity to the player's position
+		scene1.player.playerPosition.y += verticalVelocity * deltaTime;  // deltaTime is the time elapsed since the last frame
+
+		// Decrease the vertical velocity over time (simulate gravity)
+		verticalVelocity -= gravity * deltaTime;  // gravity is the acceleration due to gravity
+
+		// Increase the jump time
+		jumpTime += deltaTime;
+
+		// End the jump after a certain time or when the player hits the ground
+		if (scene1.player.playerPosition.y <= 0) {  // Adjust this condition as needed
+			isJumping = false;
+			verticalVelocity = 0;  // Reset the vertical velocity
+		}
+	}
+	else if (scene1.player.playerPosition.y > 0) {
+		// If the player is not jumping but is above the ground, apply gravity
+		scene1.player.playerPosition.y -= gravity * deltaTime;
+		if (scene1.player.playerPosition.y < 0) scene1.player.playerPosition.y = 0;  // Prevent the player from going below the ground
+	}
+
+	// Make zombies move towards the player
+	float zombieSpeed = 0.02;
+	float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+	for (auto& zombie : scene1.zombies) {
+		Vector direction = scene1.player.playerPosition - zombie.zombiePosition;
+		direction.y = 0;
+		direction.normalize();
+		zombie.zombiePosition += direction * zombieSpeed;
+
+		zombie.zombieBoundingBox.minPoint = zombie.zombiePosition - Vector(1, 1, 1);
+		zombie.zombieBoundingBox.maxPoint = zombie.zombiePosition + Vector(1, 1, 1);
+
+		zombie.zombieAngle = atan2(direction.x, direction.z) * (180.0 / M_PI);  // Convert from radians to degrees
+
+		// Check if the zombie hits the player and enough time has passed since the last hit
+		if (scene1.player.playerBoundingBox.intersects(zombie.zombieBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
+			scene1.player.health -= zombie.damage;
+
+			if (scene1.player.health <= 0) {
+				scene1.player.health = 0;
+				DisableControls();
+				glutDisplayFunc(DisplayDeathScreen);
+			}
+
+			Vector pushBackDirection = scene1.player.playerPosition - zombie.zombiePosition;
+			pushBackDirection.y = 0;
+			pushBackDirection.normalize();
+			scene1.player.playerPosition = previousPlayerPosition + pushBackDirection * 0.1f; // Adjust the multiplier as needed
+
+			scene1.player.playerBoundingBox.minPoint = scene1.player.playerPosition - Vector(1, 1, 1);
+			scene1.player.playerBoundingBox.maxPoint = scene1.player.playerPosition + Vector(1, 1, 1);
+
+			lastHitTime = currentTime;
+		}
+	}
+}
+void UpdateSecondScene(float deltaTime) {
+	Vector previousPlayerPosition = scene2.player.playerPosition;
+
+	float playerSpeed = 0.1;
+
+	if (keys['w'] || keys['W']) {
+		scene2.player.playerPosition.x += playerSpeed * cos(cameraYaw);
+		scene2.player.playerPosition.z -= playerSpeed * sin(cameraYaw);
+		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+	if (keys['s'] || keys['S']) {
+		scene2.player.playerPosition.x -= playerSpeed * cos(cameraYaw);
+		scene2.player.playerPosition.z += playerSpeed * sin(cameraYaw);
+		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+	if (keys['a'] || keys['A']) {
+		scene2.player.playerPosition.x -= playerSpeed * sin(cameraYaw);
+		scene2.player.playerPosition.z -= playerSpeed * cos(cameraYaw);
+		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+	if (keys['d'] || keys['D']) {
+		scene2.player.playerPosition.x += playerSpeed * sin(cameraYaw);
+		scene2.player.playerPosition.z += playerSpeed * cos(cameraYaw);
+		scene2.player.playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+	}
+
+	scene2.player.playerBoundingBox.minPoint = scene2.player.playerPosition - Vector(1, 1, 1);
+	scene2.player.playerBoundingBox.maxPoint = scene2.player.playerPosition + Vector(1, 1, 1);
+
+	// Check for collisions
+	if (scene2.player.playerBoundingBox.intersects(scene2.house.houseBoundingBox)) {
+		scene2.player.playerPosition = previousPlayerPosition;
+	}
+	if (scene2.player.playerBoundingBox.intersects(scene2.streetlamp.streetlampBoundingBox)) {
+		scene2.player.playerPosition = previousPlayerPosition;
+	}
+	for (auto& jeep : scene2.jeeps) {
+		if (scene2.player.playerBoundingBox.intersects(jeep.jeepBoundingBox)) {
+			scene2.player.playerPosition = previousPlayerPosition;
+		}
+	}
+	for (auto& fence : scene2.fences) {
+		if (scene2.player.playerBoundingBox.intersects(fence.fenceBoundingBox)) {
+			scene2.player.playerPosition = previousPlayerPosition;
+		}
+	}
+	for (auto& medkit : scene2.medkits) {
+		if (scene2.player.playerBoundingBox.intersects(medkit.medkitBoundingBox)) {
+			scene2.player.playerPosition = previousPlayerPosition;
+		}
+	}
+
+	// Update camera to follow player
+	if (cameraMode == THIRD_PERSON) {
+		// Calculate the camera's position based on the player's position and the camera angles
+		float distanceBehindPlayer = 3.5;
+		float cameraHeight = 5.5;
+		float cameraLeftOffset = 0;
+		Eye.x = scene2.player.playerPosition.x - cos(cameraYaw) * distanceBehindPlayer - sin(cameraYaw) * cameraLeftOffset;
+		Eye.y = scene2.player.playerPosition.y + cameraHeight;
+		Eye.z = scene2.player.playerPosition.z + sin(cameraYaw) * distanceBehindPlayer + cos(cameraYaw) * cameraLeftOffset;
+
+		// Make the camera look forward from the player's perspective
+		float lookAheadDistance = 5;
+		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
+		At.y = Eye.y + sin(cameraPitch) * lookAheadDistance;
+		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch) * lookAheadDistance;
+	}
+	else if (cameraMode == FIRST_PERSON) {
+		// Position the camera at the player's eye level
+		Eye.x = scene2.player.playerPosition.x;
+		Eye.y = scene2.player.playerPosition.y + 5;
+		Eye.z = scene2.player.playerPosition.z;
+
+		// Calculate the direction the player is facing
+		float rad = scene2.player.playerAngle * (M_PI / 180);  // Convert angle to radians
+
+		// Calculate the direction the camera is looking
+		At.x = Eye.x + cos(cameraYaw) * cos(cameraPitch);
+		At.y = Eye.y + sin(cameraPitch);
+		At.z = Eye.z - sin(cameraYaw) * cos(cameraPitch);
+	}
+
+	if (isJumping) {
+		// Apply the vertical velocity to the player's position
+		scene2.player.playerPosition.y += verticalVelocity * deltaTime;  // deltaTime is the time elapsed since the last frame
+
+		// Decrease the vertical velocity over time (simulate gravity)
+		verticalVelocity -= gravity * deltaTime;  // gravity is the acceleration due to gravity
+
+		// Increase the jump time
+		jumpTime += deltaTime;
+
+		// End the jump after a certain time or when the player hits the ground
+		if (scene2.player.playerPosition.y <= 0) {  // Adjust this condition as needed
+			isJumping = false;
+			verticalVelocity = 0;  // Reset the vertical velocity
+		}
+	}
+	else if (scene2.player.playerPosition.y > 0) {
+		// If the player is not jumping but is above the ground, apply gravity
+		scene2.player.playerPosition.y -= gravity * deltaTime;
+		if (scene2.player.playerPosition.y < 0) scene2.player.playerPosition.y = 0;  // Prevent the player from going below the ground
+	}
+
+	// Make ghosts move towards the player
+	float ghostSpeed = 0.02;
+	float currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+	for (auto& ghost : scene2.ghosts) {
+		Vector direction = scene2.player.playerPosition - ghost.ghostPosition;
+		direction.y = 0;
+		direction.normalize();
+		ghost.ghostPosition += direction * ghostSpeed;
+
+		ghost.ghostBoundingBox.minPoint = ghost.ghostPosition - Vector(1, 1, 1);
+		ghost.ghostBoundingBox.maxPoint = ghost.ghostPosition + Vector(1, 1, 1);
+
+		ghost.ghostAngle = atan2(direction.x, direction.z) * (180.0 / M_PI);  // Convert from radians to degrees
+
+		// Check if the ghost hits the player and enough time has passed since the last hit
+		if (scene2.player.playerBoundingBox.intersects(ghost.ghostBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
+			scene2.player.health -= ghost.damage;
+
+			if (scene2.player.health <= 0) {
+				scene2.player.health = 0;
+				DisableControls();
+				glutDisplayFunc(DisplayDeathScreen);
+			}
+
+			Vector pushBackDirection = scene2.player.playerPosition - ghost.ghostPosition;
+			pushBackDirection.y = 0;
+			pushBackDirection.normalize();
+			scene2.player.playerPosition = previousPlayerPosition + pushBackDirection * 0.1f; // Adjust the multiplier as needed
+
+			scene2.player.playerBoundingBox.minPoint = scene2.player.playerPosition - Vector(1, 1, 1);
+			scene2.player.playerBoundingBox.maxPoint = scene2.player.playerPosition + Vector(1, 1, 1);
+
+			lastHitTime = currentTime;
+		}
+	}
+}
+void Update() {
+	auto currentFrameTime = std::chrono::high_resolution_clock::now();
+	float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentFrameTime - lastFrameTime).count();
+	lastFrameTime = currentFrameTime;
+
+	if (currentScene == 1) {
+		UpdateFirstScene(deltaTime);
+	}
+	else if (currentScene == 2) {
+		UpdateSecondScene(deltaTime);
+	}
+
+	glutPostRedisplay();
 }
 
 // Controls
