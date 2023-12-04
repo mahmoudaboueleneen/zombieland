@@ -97,56 +97,71 @@ Model_3DS model_zombie2;
 // Player
 Model_3DS model_player;
 Vector playerPosition(0, 0, 10);
-BoundingBox playerBoundingBox(playerPosition - Vector(1, 1, 1), playerPosition + Vector(1, 1, 1)); // 2x2x2 cube around the player (for collision detection)
+BoundingBox playerBoundingBox(playerPosition - Vector(1, 1, 1), playerPosition + Vector(1, 1, 1));
 GLdouble playerAngle = 0;
-
-// First Environment Models
 
 // Rocks
 Model_3DS model_rocks;
 Vector rocksPosition(20, 0, 32);
-Vector rockBoundingBoxOffset = Vector(-3, 0, -7);  // Offset to move the bounding box closer to the model
+Vector rockBoundingBoxOffset = Vector(-3, 0, -7);
 BoundingBox rocksBoundingBox(rocksPosition - Vector(1, 1, 1) + rockBoundingBoxOffset, rocksPosition + Vector(10, 10, 10) + rockBoundingBoxOffset);
 
 // Tree
 Model_3DS model_tree;
+Vector treePosition(10, 0, 0);
+BoundingBox treeBoundingBox(treePosition - Vector(1, 1, 1), treePosition + Vector(1, 1, 1));
 
 // Medicine
-Model_3DS model_medicine2;
+Model_3DS model_medicine;
+Vector medicinePosition(14, 0, 20);
+BoundingBox medicineBoundingBox(medicinePosition - Vector(1, 1, 1), medicinePosition + Vector(1, 1, 1));
 
 // Bunker
 Model_3DS model_bunker;
+Vector bunkerPosition(-20, 0, 20);
+Vector bunkerBoundingBoxOffset(0, 0, -8);
+BoundingBox bunkerBoundingBox(bunkerPosition - Vector(1, 1, 1) + bunkerBoundingBoxOffset, bunkerPosition + Vector(15, 15, 15) + bunkerBoundingBoxOffset);
 
 // Zombie
 Model_3DS model_zombie;
 Vector zombiePosition(20, 3.3, 10);
-BoundingBox zombieBoundingBox(zombiePosition - Vector(1, 1, 1), zombiePosition + Vector(1, 1, 1));
+BoundingBox zombieBoundingBox(zombiePosition - Vector(1, 3.5, 1), zombiePosition + Vector(1, 3, 1));
 GLdouble zombieAngle = 0;
 
-// Second Environment Models
 
 // Jeep
 Model_3DS model_jeep;
 Vector jeepPosition(25, 7, -25);
-Vector jeepBoundingBoxOffset = Vector(0, 0, 8);  // Offset to move the bounding box closer to the model
+Vector jeepBoundingBoxOffset = Vector(0, 0, 8);
 BoundingBox jeepBoundingBox(jeepPosition - Vector(0.5, 10, 2) + jeepBoundingBoxOffset, jeepPosition + Vector(10, 10, 17) + jeepBoundingBoxOffset);
 
 // Fence
 Model_3DS model_fence;
+Vector fencePosition(15, 0, -5);
+BoundingBox fenceBoundingBox(fencePosition - Vector(0.1, 1, 0.1), fencePosition + Vector(8, 8, 0.5));
 
 // Medkit
 Model_3DS model_medkit;
+Vector medkitPosition(20, 0, 20);
+BoundingBox medkitBoundingBox(medkitPosition - Vector(1, 1, 1), medkitPosition + Vector(1, 1, 1));
 
 // House
 Model_3DS model_house;
+Vector housePosition(-30, 0, -20);
+Vector houseBoundingBoxOffset = Vector(-6, 0, -7);
+BoundingBox houseBoundingBox(housePosition - Vector(1, 1, 1) + houseBoundingBoxOffset, housePosition + Vector(16, 16, 16) + houseBoundingBoxOffset);
 
 // Ghost
 Model_3DS model_ghost;
+Vector ghostPosition(0, 0, 20);
+BoundingBox ghostBoundingBox(ghostPosition - Vector(1, 1, 1), ghostPosition + Vector(1, 7, 1));
+GLdouble ghostAngle = 0;
 
 // Streetlamp
 Model_3DS model_streetlamp;
+Vector streetlampPosition(20, 0, -15);
+BoundingBox streetlampBoundingBox(streetlampPosition - Vector(1, 1, 1), streetlampPosition + Vector(1, 8, 1));
 
-//================================================================================================//
 
 bool keys[256];
 int totalGameTime = 30;
@@ -160,7 +175,7 @@ float verticalVelocity = 0;
 float jumpTime = 0;
 float gravity = 9.8;
 
-// Config Functions
+// Config, Setup, Loading Assets
 void InitLightSource() {
 	// Enable Lighting for this OpenGL Program
 	glEnable(GL_LIGHTING);
@@ -234,8 +249,131 @@ void Init(void) {
 
 	glEnable(GL_NORMALIZE);
 }
+void Reshape(int w, int h) {
+	if (h == 0) {
+		h = 1;
+	}
 
-// Draw Environment Models
+	WIDTH = w;
+	HEIGHT = h;
+
+	// set the drawable region of the window
+	glViewport(0, 0, w, h);
+
+	// set up the projection matrix 
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(fovy, (GLdouble)WIDTH / (GLdouble)HEIGHT, zNear, zFar);
+
+	// go back to modelview matrix so we can move the objects about
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+}
+void LoadAssets() {
+	// Loading Model files
+
+	/*
+	model_car.Load("Models/car/sportsCar.3ds");
+	model_car.Materials[1].tex.BuildColorTexture(0, 0, 0);
+	model_car.Materials[2].tex.BuildColorTexture(0, 0, 0);
+	model_car.Materials[4].tex.BuildColorTexture(0, 0, 0);
+	model_car.Materials[5].tex.BuildColorTexture(0, 0, 0);
+	model_car.Materials[6].tex.BuildColorTexture(0, 0, 0);
+	model_car.Materials[3].tex.BuildColorTexture(129, 12, 12);
+	model_car.rot.x = -90.0f;
+	// m.rot.y = 30.0f;
+	// m.rot.z = 0.0f;
+	model_car.pos.z = -2.3f;
+	// m.pos.y = 0.0f;
+	// m.pos.z = 0.0f;
+	*/
+
+	// model_spaceCraft.Load("Models/rocket/Soyuz.3ds");
+	// model_statue.Load("Models/obstacles/Acient_Statue_02.3ds");
+
+	model_jeep.Load("Models/jeep/jeep.3ds");
+
+	model_tree.Load("Models/tree/Tree1.3ds");
+	model_player.Load("Models/player/Soldier US N260412.3ds");
+	//model_player.Materials[5].tex.BuildColorTexture(0, 0, 0);
+
+	model_ghost.Load("Models/monster/death.3ds");
+	//model_ghost.Materials[0].tex.BuildColorTexture(0, 0, 0);
+
+	model_medkit.Load("Models/medicine/medicines/Box.3ds");
+	model_medicine.Load("Models/medicine/medicines/Bottle.3ds");
+	model_rocks.Load("Models/obstacles/Campfire.3ds");
+	model_house.Load("Models/house/house.3ds");
+	model_bunker.Load("Models/bunker/Ruin.3ds");
+
+	model_zombie.Load("Models/zombie/ZOMBIE.3ds");
+	//model_zombie2.Load("Models/zombie2/monster.3ds");
+
+	model_fence.Load("Models/fence/fence_01_3ds.3ds");
+	model_streetlamp.Load("Models/streetlamp/Lamp.3ds");
+
+	// Loading Texture files
+	tex_ground.Load("Textures/ground.bmp");
+	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
+}
+
+// Controls
+void KeyboardDown(unsigned char button, int x, int y) {
+	keys[button] = true;
+
+	if (button == 27) {  // Equivalent to ESC key
+		exit(0);
+	}
+	else if (button == '1') {
+		cameraMode = FIRST_PERSON;
+	}
+	else if (button == '2') {
+		cameraMode = THIRD_PERSON;
+	}
+	else if (button == ' ' && !isJumping) {
+		isJumping = true;
+		verticalVelocity = 5;
+		jumpTime = 0;
+	}
+}
+void KeyboardUp(unsigned char button, int x, int y) {
+	keys[button] = false;
+}
+void MouseMoved(int x, int y) {
+	// Calculate mouse movement since last frame
+	int centerX = WIDTH / 2;
+	int centerY = HEIGHT / 2;
+	int deltaX = x - centerX;
+	int deltaY = y - centerY;
+
+	// Adjust camera angles
+	float sensitivity = 0.005f;  // Adjust as needed
+	cameraYaw -= deltaX * sensitivity;
+	cameraPitch -= deltaY * sensitivity;
+
+	if (cameraMode == THIRD_PERSON) {
+		// Limit pitch to avoid flipping the camera and looking under the ground
+		float upperPitchLimit = M_PI / 6;  // Adjust as needed
+		float lowerPitchLimit = -M_PI / 12;  // Adjust as needed
+		if (cameraPitch < lowerPitchLimit) cameraPitch = lowerPitchLimit;
+		if (cameraPitch > upperPitchLimit) cameraPitch = upperPitchLimit;
+	}
+	else if (cameraMode == FIRST_PERSON) {
+		// Limit pitch to avoid flipping the camera and looking under the ground
+		float pitchLimit = M_PI / 2.5;  // Adjust as needed
+		if (cameraPitch < -pitchLimit) cameraPitch = -pitchLimit;
+		if (cameraPitch > pitchLimit) cameraPitch = pitchLimit;
+	}
+
+	// Update player's rotation to match the camera's yaw angle
+	playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
+
+	// Warp mouse cursor back to the center of the window
+	glutWarpPointer(centerX, centerY);
+}
+
+// Drawing
 void drawGround() {
 	glDisable(GL_LIGHTING);	// Disable lighting 
 
@@ -304,8 +442,6 @@ void drawBoundingBox(const BoundingBox& box) {
 	// Re-enable lighting
 	glEnable(GL_LIGHTING);
 }
-
-// Draw HUD
 void drawTime(int remainingTime) {
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
@@ -365,234 +501,6 @@ void drawScore(int score) {
 	glMatrixMode(GL_MODELVIEW);
 }
 
-// Display
-void DisplayGame(void) {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glLoadIdentity();
-	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
-
-	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
-	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f, 0.0f };
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
-
-	// Draw Bounding Boxes
-	drawBoundingBox(playerBoundingBox);
-	drawBoundingBox(jeepBoundingBox);
-	drawBoundingBox(zombieBoundingBox);
-	drawBoundingBox(rocksBoundingBox);
-
-	// Draw Time 
-	/*
-	int currentTime = glutGet(GLUT_ELAPSED_TIME);
-	int elapsedTime = (currentTime - startTime) / 1000;
-	int remainingTime = totalGameTime - elapsedTime;
-
-	if (remainingTime <= 0) {
-		// do something
-	}
-	drawTime(remainingTime);
-	*/
-
-	// Draw Score
-	drawScore(currentScore);
-
-	// Draw Ground
-	drawGround();
-
-	// Draw Tree
-	glPushMatrix();
-	glTranslatef(10, 0, 0);
-	glScalef(0.7, 0.7, 0.7);
-	model_tree.Draw();
-	glPopMatrix();
-
-	// Draw Car
-	glPushMatrix();
-	glRotatef(90.f, 1, 0, 0);
-	glScaled(0.7, 0.7, 1);
-	model_car.Draw();
-	glPopMatrix();
-
-	// Draw Player
-	glPushMatrix();
-	glTranslatef(playerPosition.x, playerPosition.y, playerPosition.z);
-	glRotatef(-90 + playerAngle, 0, 1, 0);
-	glScaled(0.03, 0.03, 0.03);
-	model_player.Draw();
-	glPopMatrix();
-
-	// Draw Monster
-	glPushMatrix();
-	glTranslatef(0, 0.0, 20);
-	glRotatef(130, 0, 1,0);
-	glScaled(0.03, 0.03, 0.03);
-	model_ghost.Draw();
-	glPopMatrix();
-
-	// Draw Surrounding Statues (Walls)
-	drawSurroundingStatues();
-	
-	// Draw Medkit
-    glPushMatrix();
-	glTranslatef(20, 0.0, 20);
-	glRotatef(130, 0, 1, 0);
-	glScaled(0.05, 0.05, 0.05);
-	model_medkit.Draw();
-	glPopMatrix();
-
-	// Draw Medicine2
-	glPushMatrix();
-	glTranslatef(18, 0.0, 20);
-	glRotatef(130, 0, 1, 0);
-	glScaled(0.05, 0.05, 0.05);
-	model_medicine2.Draw();
-	glPopMatrix();
-
-	// Draw Jeep
-	glPushMatrix();
-	glTranslatef(jeepPosition.x, jeepPosition.y, jeepPosition.z);
-	glRotatef(130, 0, 1, 0);  // Existing rotation
-	glRotatef(-315, 0, 1, 0);  // New rotation to align the model with the bounding box
-	glScaled(0.25, 0.25, 0.25);
-	model_jeep.Draw();
-	glPopMatrix();
-
-	// Draw SpaceCraft
-	glPushMatrix();
-	glTranslatef(20, 0, -10);
-	glRotatef(130, 0, 1, 0);
-	glScaled(0.1, 0.1, 0.1);
-	model_spaceCraft.Draw();
-	glPopMatrix();
-
-	// Draw Rocks
-	glPushMatrix();
-	glTranslatef(rocksPosition.x, rocksPosition.y, rocksPosition.z);
-	glRotatef(130, 0, 1, 0);
-	glScaled(0.12, 0.12, 0.12);
-	model_rocks.Draw();
-	glPopMatrix();
-
-	// Draw House
-	glPushMatrix();
-	glTranslatef(-30, 0, -20);
-	glRotatef(90.f, 1, 0, 0);
-	glScaled(3, 3, 3);
-	model_house.Draw();
-	glPopMatrix();
-
-	// Draw Bunker
-	glPushMatrix();
-	glTranslatef(-20, 0, 32);
-	glRotatef(90, 0, 1, 0);
-	glScaled(0.01, 0.01, 0.01);
-	model_bunker.Draw();
-	glPopMatrix();
-
-	// Draw Zombie
-	glPushMatrix();
-	glTranslatef(zombiePosition.x, zombiePosition.y, zombiePosition.z);
-	glRotatef(90.f, 1, 0, 0);
-	glRotatef(270.f, 0, 0, 1);
-	glScaled(3, 3, 3);
-	model_zombie.Draw();
-	glPopMatrix();
-
-	// Draw Zombie 2
-	glPushMatrix();
-	glTranslatef(27, 0, 10);
-	glScaled(0.07, 0.07, 0.07);
-	model_zombie2.Draw();
-	glPopMatrix();
-
-	// Draw Fence
-	glPushMatrix();
-	glTranslatef(20, 0, 0);
-	glRotatef(0.0f, 1, 0, 0);
-	glScaled(0.01, 0.01, 0.01);
-	model_fence.Draw();
-	glPopMatrix();
-
-	// Draw Streetlamp
-	glPushMatrix();
-	glTranslatef(25, 0, 0);
-	glRotatef(0.0f, 1, 0, 0);
-	glScaled(1, 1, 1);
-	model_streetlamp.Draw();
-	glPopMatrix();
-	
-	// Draw Skybox
-	glPushMatrix();
-	GLUquadricObj* qobj;
-	qobj = gluNewQuadric();
-	glTranslated(50, 0, 0);
-	glRotated(90, 1, 0, 1);
-	glBindTexture(GL_TEXTURE_2D, tex);
-	gluQuadricTexture(qobj, true);
-	gluQuadricNormals(qobj, GL_SMOOTH);
-	gluSphere(qobj, 100, 100, 100);
-	gluDeleteQuadric(qobj);
-	glPopMatrix();
-
-	glutSwapBuffers();
-}
-
-// Controls
-void KeyboardDown(unsigned char button, int x, int y) {
-	keys[button] = true;
-
-	if (button == 27) {  // Equivalent to ESC key
-		exit(0);
-	} else if (button == '1') {
-		cameraMode = FIRST_PERSON;
-	}
-	else if (button == '2') {
-		cameraMode = THIRD_PERSON;
-	}
-	else if (button == ' ' && !isJumping) {
-		isJumping = true;
-		verticalVelocity = 5;
-		jumpTime = 0;
-	}
-}
-void KeyboardUp(unsigned char button, int x, int y) {
-	keys[button] = false;
-}
-void MouseMoved(int x, int y) {
-	// Calculate mouse movement since last frame
-	int centerX = WIDTH / 2;
-	int centerY = HEIGHT / 2;
-	int deltaX = x - centerX;
-	int deltaY = y - centerY;
-
-	// Adjust camera angles
-	float sensitivity = 0.005f;  // Adjust as needed
-	cameraYaw -= deltaX * sensitivity;
-	cameraPitch -= deltaY * sensitivity;
-
-	if (cameraMode == THIRD_PERSON) {
-		// Limit pitch to avoid flipping the camera and looking under the ground
-		float upperPitchLimit = M_PI / 6;  // Adjust as needed
-		float lowerPitchLimit = -M_PI / 12;  // Adjust as needed
-		if (cameraPitch < lowerPitchLimit) cameraPitch = lowerPitchLimit;
-		if (cameraPitch > upperPitchLimit) cameraPitch = upperPitchLimit;
-	}
-	else if (cameraMode == FIRST_PERSON) {
-		// Limit pitch to avoid flipping the camera and looking under the ground
-		float pitchLimit = M_PI / 2.5;  // Adjust as needed
-		if (cameraPitch < -pitchLimit) cameraPitch = -pitchLimit;
-		if (cameraPitch > pitchLimit) cameraPitch = pitchLimit;
-	}
-
-	// Update player's rotation to match the camera's yaw angle
-	playerAngle = cameraYaw * (180.0 / M_PI);  // Convert from radians to degrees
-
-	// Warp mouse cursor back to the center of the window
-	glutWarpPointer(centerX, centerY);
-}
-
 // Update
 void Update() {
 	auto currentFrameTime = std::chrono::high_resolution_clock::now();
@@ -628,13 +536,24 @@ void Update() {
 	playerBoundingBox.maxPoint = playerPosition + Vector(1, 1, 1);
 
 	// Check for collisions
-	if (playerBoundingBox.intersects(jeepBoundingBox)) {
+	if (playerBoundingBox.intersects(jeepBoundingBox) ||
+		playerBoundingBox.intersects(rocksBoundingBox) ||
+		playerBoundingBox.intersects(treeBoundingBox) ||
+		playerBoundingBox.intersects(fenceBoundingBox) ||
+		playerBoundingBox.intersects(streetlampBoundingBox)
+		) {
 		playerPosition = previousPlayerPosition;
 	}
-	else if (playerBoundingBox.intersects(zombieBoundingBox)) {
+	else if (playerBoundingBox.intersects(zombieBoundingBox) ||
+		playerBoundingBox.intersects(ghostBoundingBox)) {
 		playerPosition = previousPlayerPosition;
 	}
-	else if (playerBoundingBox.intersects(rocksBoundingBox)) {
+	else if (playerBoundingBox.intersects(medicineBoundingBox) ||
+		playerBoundingBox.intersects(medkitBoundingBox)) {
+		playerPosition = previousPlayerPosition;
+	}
+	else if (playerBoundingBox.intersects(bunkerBoundingBox) ||
+		playerBoundingBox.intersects(houseBoundingBox)) {
 		playerPosition = previousPlayerPosition;
 	}
 
@@ -692,78 +611,189 @@ void Update() {
 	}
 
 	glutPostRedisplay();
-}	
-
-// Reshape
-void Reshape(int w, int h) {
-	if (h == 0) {
-		h = 1;
-	}
-
-	WIDTH = w;
-	HEIGHT = h;
-
-	// set the drawable region of the window
-	glViewport(0, 0, w, h);
-
-	// set up the projection matrix 
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(fovy, (GLdouble)WIDTH / (GLdouble)HEIGHT, zNear, zFar);
-
-	// go back to modelview matrix so we can move the objects about
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 }
 
-// Load Assets
-void LoadAssets() {
-	// Loading Model files
+// Display
+void DisplayGame(void) {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glLoadIdentity();
+	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+
+	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
+	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f, 0.0f };
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
+
+	// Draw Bounding Boxes
+	drawBoundingBox(playerBoundingBox);
+	drawBoundingBox(jeepBoundingBox);
+	drawBoundingBox(zombieBoundingBox);
+	drawBoundingBox(rocksBoundingBox);
+	drawBoundingBox(treeBoundingBox);
+	drawBoundingBox(medicineBoundingBox);
+	drawBoundingBox(bunkerBoundingBox);
+	drawBoundingBox(fenceBoundingBox);
+	drawBoundingBox(medkitBoundingBox);
+	drawBoundingBox(houseBoundingBox);
+	drawBoundingBox(ghostBoundingBox);
+	drawBoundingBox(streetlampBoundingBox);
+
+	// Draw Time 
 	/*
-	model_car.Load("Models/car/sportsCar.3ds");
-	model_car.Materials[1].tex.BuildColorTexture(0, 0, 0);
-	model_car.Materials[2].tex.BuildColorTexture(0, 0, 0);
-	model_car.Materials[4].tex.BuildColorTexture(0, 0, 0);
-	model_car.Materials[5].tex.BuildColorTexture(0, 0, 0);
-	model_car.Materials[6].tex.BuildColorTexture(0, 0, 0);
-	model_car.Materials[3].tex.BuildColorTexture(129, 12, 12);
-	model_car.rot.x = -90.0f;
-	// m.rot.y = 30.0f;
-	// m.rot.z = 0.0f;
-	model_car.pos.z = -2.3f;
-	// m.pos.y = 0.0f;
-	// m.pos.z = 0.0f;
+	int currentTime = glutGet(GLUT_ELAPSED_TIME);
+	int elapsedTime = (currentTime - startTime) / 1000;
+	int remainingTime = totalGameTime - elapsedTime;
+
+	if (remainingTime <= 0) {
+		// do something
+	}
+	drawTime(remainingTime);
 	*/
 
-	// model_spaceCraft.Load("Models/rocket/Soyuz.3ds");
-	// model_statue.Load("Models/obstacles/Acient_Statue_02.3ds");
+	// Draw Score
+	drawScore(currentScore);
 
-	model_jeep.Load("Models/jeep/jeep.3ds");
+	// Draw Ground
+	drawGround();
 
-	model_tree.Load("Models/tree/Tree1.3ds");
-	model_player.Load("Models/player/Soldier US N260412.3ds");
-	//model_player.Materials[5].tex.BuildColorTexture(0, 0, 0);
+	// Draw Tree
+	glPushMatrix();
+	glTranslatef(treePosition.x, treePosition.y, treePosition.z);
+	glScalef(0.7, 0.7, 0.7);
+	model_tree.Draw();
+	glPopMatrix();
 
-	model_ghost.Load("Models/monster/death.3ds");
-	//model_ghost.Materials[0].tex.BuildColorTexture(0, 0, 0);
+	// Draw Car
+	glPushMatrix();
+	glRotatef(90.f, 1, 0, 0);
+	glScaled(0.7, 0.7, 1);
+	model_car.Draw();
+	glPopMatrix();
 
-	model_medkit.Load("Models/medicine/medicines/Box.3ds");
-	model_medicine2.Load("Models/medicine/medicines/Bottle.3ds");
-	model_rocks.Load("Models/obstacles/Campfire.3ds");
-	model_house.Load("Models/house/house.3ds");
-	model_bunker.Load("Models/bunker/Ruin.3ds");
+	// Draw Player
+	glPushMatrix();
+	glTranslatef(playerPosition.x, playerPosition.y, playerPosition.z);
+	glRotatef(-90 + playerAngle, 0, 1, 0);
+	glScaled(0.03, 0.03, 0.03);
+	model_player.Draw();
+	glPopMatrix();
 
-	model_zombie.Load("Models/zombie/ZOMBIE.3ds");
-	//model_zombie2.Load("Models/zombie2/monster.3ds");
+	// Draw Ghost
+	glPushMatrix();
+	glTranslatef(ghostPosition.x, ghostPosition.y, ghostPosition.z);
+	glRotatef(130, 0, 1,0);
+	glScaled(0.03, 0.03, 0.03);
+	model_ghost.Draw();
+	glPopMatrix();
 
-	model_fence.Load("Models/fence/fence_01_3ds.3ds");
-	model_streetlamp.Load("Models/streetlamp/Lamp.3ds");
+	// Draw Surrounding Statues (Walls)
+	drawSurroundingStatues();
+	
+	// Draw Medkit
+    glPushMatrix();
+	glTranslatef(medkitPosition.x, medkitPosition.y, medkitPosition.z);
+	glRotatef(130, 0, 1, 0);
+	glScaled(0.05, 0.05, 0.05);
+	model_medkit.Draw();
+	glPopMatrix();
 
-	// Loading Texture files
-	tex_ground.Load("Textures/ground.bmp");
-	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
+	// Draw Medicine
+	glPushMatrix();
+	glTranslatef(medicinePosition.x, medicinePosition.y, medicinePosition.z);
+	glRotatef(130, 0, 1, 0);
+	glScaled(0.05, 0.05, 0.05);
+	model_medicine.Draw();
+	glPopMatrix();
+
+	// Draw Jeep
+	glPushMatrix();
+	glTranslatef(jeepPosition.x, jeepPosition.y, jeepPosition.z);
+	glRotatef(130, 0, 1, 0);  // Existing rotation
+	glRotatef(-315, 0, 1, 0);  // New rotation to align the model with the bounding box
+	glScaled(0.25, 0.25, 0.25);
+	model_jeep.Draw();
+	glPopMatrix();
+
+	// Draw SpaceCraft
+	glPushMatrix();
+	glTranslatef(20, 0, -10);
+	glRotatef(130, 0, 1, 0);
+	glScaled(0.1, 0.1, 0.1);
+	model_spaceCraft.Draw();
+	glPopMatrix();
+
+	// Draw Rocks
+	glPushMatrix();
+	glTranslatef(rocksPosition.x, rocksPosition.y, rocksPosition.z);
+	glRotatef(130, 0, 1, 0);
+	glScaled(0.12, 0.12, 0.12);
+	model_rocks.Draw();
+	glPopMatrix();
+
+	// Draw House
+	glPushMatrix();
+	glTranslatef(housePosition.x, housePosition.y, housePosition.z);
+	glRotatef(90.f, 1, 0, 0);
+	glScaled(3, 3, 3);
+	model_house.Draw();
+	glPopMatrix();
+
+	// Draw Bunker
+	glPushMatrix();
+	glTranslatef(bunkerPosition.x, bunkerPosition.y, bunkerPosition.z);
+	glRotatef(90, 0, 1, 0);
+	glRotatef(-35, 0, 1, 0);
+	glScaled(0.01, 0.01, 0.01);
+	model_bunker.Draw();
+	glPopMatrix();
+
+	// Draw Zombie
+	glPushMatrix();
+	glTranslatef(zombiePosition.x, zombiePosition.y, zombiePosition.z);
+	glRotatef(90.f, 1, 0, 0);
+	glRotatef(270.f, 0, 0, 1);
+	glScaled(3, 3, 3);
+	model_zombie.Draw();
+	glPopMatrix();
+
+	// Draw Zombie 2
+	glPushMatrix();
+	glTranslatef(27, 0, 10);
+	glScaled(0.07, 0.07, 0.07);
+	model_zombie2.Draw();
+	glPopMatrix();
+
+	// Draw Fence
+	glPushMatrix();
+	glTranslatef(fencePosition.x, fencePosition.y, fencePosition.z);
+	glRotatef(0.0f, 1, 0, 0);
+	glScaled(0.02, 0.02, 0.02);
+	model_fence.Draw();
+	glPopMatrix();
+
+	// Draw Streetlamp
+	glPushMatrix();
+	glTranslatef(streetlampPosition.x, streetlampPosition.y, streetlampPosition.z);
+	glRotatef(0.0f, 1, 0, 0);
+	glScaled(1.4, 1.4, 1.4);
+	model_streetlamp.Draw();
+	glPopMatrix();
+	
+	// Draw Skybox
+	glPushMatrix();
+	GLUquadricObj* qobj;
+	qobj = gluNewQuadric();
+	glTranslated(50, 0, 0);
+	glRotated(90, 1, 0, 1);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	gluQuadricTexture(qobj, true);
+	gluQuadricNormals(qobj, GL_SMOOTH);
+	gluSphere(qobj, 100, 100, 100);
+	gluDeleteQuadric(qobj);
+	glPopMatrix();
+
+	glutSwapBuffers();
 }
 
 // Main
