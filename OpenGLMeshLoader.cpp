@@ -168,7 +168,6 @@ public:
 		fenceBoundingBox = BoundingBox(minCorner, maxCorner);
 	}
 };
-
 class Jeep {
 public:
 	Model_3DS model_jeep;
@@ -370,6 +369,9 @@ char title[] = "Zombieland";
 GLuint tex; // for sky
 GLTexture tex_ground;
 
+GLuint tex2; // for dark sky
+GLTexture tex_ground2;
+
 GLdouble fovy = 90.0;
 GLdouble aspectRatio = (GLdouble)WIDTH / (GLdouble)HEIGHT;
 GLdouble zNear = 0.1;
@@ -559,8 +561,10 @@ void LoadAssets() {
 	model_streetlamp.Load("Models/streetlamp/Lamp.3ds");
 
 	// Loading Texture files
-	tex_ground.Load("Textures/ground.bmp");
+	tex_ground.Load("Textures/grass-ground.bmp");
+	tex_ground2.Load("Textures/stone-ground.bmp");
 	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
+	loadBMP(&tex2, "Textures/dark-clouds.bmp", true);
 }
 
 // Misc
@@ -571,14 +575,14 @@ void DisableControls() {
 }
 
 // Drawing
-void drawGround() {
+void drawGround(GLTexture groundTexture) {
 	glDisable(GL_LIGHTING);	// Disable lighting 
 
 	glColor3f(0.6, 0.6, 0.6);	// Dim the ground texture a bit
 
 	glEnable(GL_TEXTURE_2D);	// Enable 2D texturing
 
-	glBindTexture(GL_TEXTURE_2D, tex_ground.texture[0]);	// Bind the ground texture
+	glBindTexture(GL_TEXTURE_2D, groundTexture.texture[0]);	// Bind the ground texture
 
 	glPushMatrix();
 	glBegin(GL_QUADS);
@@ -770,6 +774,7 @@ void DisplayFirstScene(void) {
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
 
 	// Draw Bounding Boxes for testing
+	/*
 	drawBoundingBox(scene1.player.playerBoundingBox);
 	drawBoundingBox(scene1.bunker.bunkerBoundingBox);
 	for (auto& rock : scene1.rocks) {
@@ -784,6 +789,7 @@ void DisplayFirstScene(void) {
 	for (auto& zombie : scene1.zombies) {
 		drawBoundingBox(zombie.zombieBoundingBox);
 	}
+	*/
 
 	// Draw Time 
 	/*
@@ -805,7 +811,7 @@ void DisplayFirstScene(void) {
 	drawScore(scene1.player.score);
 
 	// Draw Ground
-	drawGround();
+	drawGround(tex_ground);
 
 	// Draw Player
 	glPushMatrix();
@@ -892,6 +898,8 @@ void DisplaySecondScene(void) {
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
 
 	// Draw Bounding Boxes for testing
+
+	/*
 	drawBoundingBox(scene2.player.playerBoundingBox);
 	drawBoundingBox(scene2.house.houseBoundingBox);
 	drawBoundingBox(scene2.streetlamp.streetlampBoundingBox);
@@ -907,6 +915,7 @@ void DisplaySecondScene(void) {
 	for (auto& ghost : scene2.ghosts) {
 		drawBoundingBox(ghost.ghostBoundingBox);
 	}
+	*/
 
 	// Draw Time 
 	/*
@@ -928,7 +937,7 @@ void DisplaySecondScene(void) {
 	drawScore(scene2.player.score);
 
 	// Draw Ground
-	drawGround();
+	drawGround(tex_ground2);
 
 	// Draw Player
 	glPushMatrix();
@@ -1004,7 +1013,7 @@ void DisplaySecondScene(void) {
 	qobj = gluNewQuadric();
 	glTranslated(50, 0, 0);
 	glRotated(90, 1, 0, 1);
-	glBindTexture(GL_TEXTURE_2D, tex);
+	glBindTexture(GL_TEXTURE_2D, tex2);
 	gluQuadricTexture(qobj, true);
 	gluQuadricNormals(qobj, GL_SMOOTH);
 	gluSphere(qobj, 100, 100, 100);
@@ -1098,7 +1107,7 @@ void DisplayWinScreen() {
 	glRasterPos2f(WIDTH / 2 - 50, HEIGHT / 2);  // Adjust as needed
 
 	// Render the "YOU WIN" text
-	const char* text = "YOU HAVE SURVIVED";
+	const char* text = "YOU SURVIVED";
 	int len = strlen(text);
 	for (int i = 0; i < len; i++) {
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, text[i]);
@@ -1109,7 +1118,7 @@ void DisplayWinScreen() {
 
 	// Render the score text
 	char scoreStr[20];
-	sprintf(scoreStr, "SUPPLIES SCORE: %d", scoreToBeDisplayed);
+	sprintf(scoreStr, "SCORE: %d", scoreToBeDisplayed);
 	len = strlen(scoreStr);
 	for (int i = 0; i < len; i++) {
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, scoreStr[i]);
@@ -1658,11 +1667,23 @@ void main(int argc, char** argv) {
 	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, -33), -90));
 	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, -38), -90));
 
-
+	scene2.fences.push_back(Fence(model_fence, Vector(4, 0, 31), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(4, 0, 23), -90));
 
 	scene2.jeeps.push_back(Jeep(model_jeep, Vector(25, 7, -25)));
+	scene2.jeeps.push_back(Jeep(model_jeep, Vector(-15, 7, 15)));
+
 	scene2.medkits.push_back(Medkit(model_medkit, Vector(20, 0, 20)));
-	scene2.ghosts.push_back(Ghost(model_ghost, Vector(0, 0, 20)));
+	scene2.medkits.push_back(Medkit(model_medkit, Vector(15, 0, 10)));
+	scene2.medkits.push_back(Medkit(model_medkit, Vector(-10, 0, 20)));
+	scene2.medkits.push_back(Medkit(model_medkit, Vector(-15, 0, 5)));
+	scene2.medkits.push_back(Medkit(model_medkit, Vector(-18, 0, 7)));
+	scene2.medkits.push_back(Medkit(model_medkit, Vector(-19, 0, 8)));
+	scene2.medkits.push_back(Medkit(model_medkit, Vector(22, 0, -25)));
+	scene2.medkits.push_back(Medkit(model_medkit, Vector(22, 0, -20)));
+
+	scene2.ghosts.push_back(Ghost(model_ghost, Vector(-10, 0, 20)));
+	scene2.ghosts.push_back(Ghost(model_ghost, Vector(-15, 0, 10)));
 
 	// Play background ambience
 	//PlaySound(TEXT("sounds/manic-whistle.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_LOOP);
