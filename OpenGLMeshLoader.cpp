@@ -91,6 +91,19 @@ public:
 
 };
 
+// Utility Functions
+Vector rotateY(Vector point, Vector origin, float angle) {
+	float rad = angle * (M_PI / 180.0f); // Convert to radians
+	float sinAngle = sin(rad);
+	float cosAngle = cos(rad);
+	Vector translatedPoint = point - origin;
+	return Vector(
+		translatedPoint.x * cosAngle - translatedPoint.z * sinAngle,
+		translatedPoint.y,
+		translatedPoint.x * sinAngle + translatedPoint.z * cosAngle
+	) + origin;
+}
+
 // Model Classes
 class Ghost {
 public:
@@ -137,18 +150,25 @@ public:
 	Model_3DS model_fence;
 	Vector fencePosition;
 	BoundingBox fenceBoundingBox;
+	float rotationAngle;
 
 	Fence()
 	{
 	}
 
-	Fence(Model_3DS model, Vector position)
+	Fence(Model_3DS model, Vector position, float angle)
 		: model_fence(model),
 		fencePosition(position),
-		fenceBoundingBox(position - Vector(0.1, 1, 0.1), position + Vector(8, 8, 0.5))
+		rotationAngle(angle)
 	{
+		Vector minCorner = position - Vector(0.1, 1, 0.1);
+		Vector maxCorner = position + Vector(8, 8, 0.5);
+		minCorner = rotateY(minCorner, position, -angle); // Reverse the rotation
+		maxCorner = rotateY(maxCorner, position, -angle); // Reverse the rotation
+		fenceBoundingBox = BoundingBox(minCorner, maxCorner);
 	}
 };
+
 class Jeep {
 public:
 	Model_3DS model_jeep;
@@ -963,6 +983,7 @@ void DisplaySecondScene(void) {
 	for (auto& fence : scene2.fences) {
 		glPushMatrix();
 		glTranslatef(fence.fencePosition.x, fence.fencePosition.y, fence.fencePosition.z);
+		glRotatef(fence.rotationAngle, 0.0f, 1.0f, 0.0f);
 		glRotatef(0.0f, 1, 0, 0);
 		glScaled(0.02, 0.02, 0.02);
 		fence.model_fence.Draw();
@@ -1590,19 +1611,53 @@ void main(int argc, char** argv) {
 
 	// Initialize Second Scene
 	scene2.player = Player(model_player, Vector(25, 0, 25));
-	scene2.house = House(model_house, Vector(-30, 0, -20));
+	scene2.house = House(model_house, Vector(-25, 0, -20));
 	scene2.streetlamp = Streetlamp(model_streetlamp, Vector(20, 0, -15));
 
-	scene2.fences.push_back(Fence(model_fence, Vector(33, 0, -39)));
-	scene2.fences.push_back(Fence(model_fence, Vector(25, 0, -39)));
-	scene2.fences.push_back(Fence(model_fence, Vector(17, 0, -39)));
-	scene2.fences.push_back(Fence(model_fence, Vector(9, 0, -39)));
-	scene2.fences.push_back(Fence(model_fence, Vector(1, 0, -39)));
-	scene2.fences.push_back(Fence(model_fence, Vector(-7, 0, -39)));
-	scene2.fences.push_back(Fence(model_fence, Vector(-15, 0, -39)));
-	scene2.fences.push_back(Fence(model_fence, Vector(-23, 0, -39)));
-	scene2.fences.push_back(Fence(model_fence, Vector(-31, 0, -39)));
-	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, -39)));
+	scene2.fences.push_back(Fence(model_fence, Vector(33, 0, -39), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(25, 0, -39), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(17, 0, -39), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(9, 0, -39), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(1, 0, -39), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(-7, 0, -39), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(-15, 0, -39), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(-23, 0, -39), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(-31, 0, -39), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, -39), 0));
+
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, -39), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, -31), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, -23), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, -15), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, -7), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, 1), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, 9), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, 17), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, 25), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, 33), -90));
+
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, 40), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(-31, 0, 40), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(-23, 0, 40), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(-15, 0, 40), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(-7, 0, 40), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(1, 0, 40), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(9, 0, 40), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(17, 0, 40), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(25, 0, 40), 0));
+	scene2.fences.push_back(Fence(model_fence, Vector(32, 0, 40), 0));
+
+	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, 31), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, 23), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, 15), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, 7), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, -1), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, -9), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, -17), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, -25), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, -33), -90));
+	scene2.fences.push_back(Fence(model_fence, Vector(40, 0, -38), -90));
+
 
 
 	scene2.jeeps.push_back(Jeep(model_jeep, Vector(25, 7, -25)));
