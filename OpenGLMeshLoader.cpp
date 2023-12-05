@@ -1533,12 +1533,60 @@ void main(int argc, char** argv) {
 	LoadAssets();
 
 	// Initialize First Scene
-	scene1.player = Player(model_player, Vector(0, 0, 10));
-	scene1.bunker = Bunker(model_bunker, Vector(-20, 0, 20));
-	scene1.rocks.push_back(Rock(model_rocks, Vector(20, 0, 32)));
+	scene1.player = Player(model_player, Vector(20, 0, -20));
+	scene1.bunker = Bunker(model_bunker, Vector(-25, 0, 30));
+
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-40, 0, 45)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-30, 0, 45)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-20, 0, 45)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-10, 0, 45)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(0, 0, 45)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(10, 0, 45)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(20, 0, 45)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(30, 0, 45)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(35, 0, 35)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(35, 0, 25)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(35, 0, 15)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(35, 0, 5)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(35, 0, -5)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(35, 0, -15)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(35, 0, -25)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(35, 0, -35)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(25, 0, -35)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(15, 0, -35)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(5, 0, -35)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-5, 0, -35)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-15, 0, -35)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-25, 0, -35)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-35, 0, -35)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-35, 0, -25)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-35, 0, -15)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-35, 0, -5)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-35, 0, 5)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-35, 0, 15)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-35, 0, 25)));
+	scene1.rocks.push_back(Rock(model_rocks, Vector(-35, 0, 35)));
+
+	scene1.rocks.push_back(Rock(model_rocks, Vector(10, 0, -10)));
+
 	scene1.trees.push_back(Tree(model_tree, Vector(10, 0, 0)));
+	scene1.trees.push_back(Tree(model_tree, Vector(5, 0, 2)));
+	//scene1.trees.push_back(Tree(model_tree, Vector(-5, 0, 5)));
+	//scene1.trees.push_back(Tree(model_tree, Vector(-12, 0, 7)));
+	//scene1.trees.push_back(Tree(model_tree, Vector(-12, 0, -7)));
+	//scene1.trees.push_back(Tree(model_tree, Vector(-14, 0, -12)));
+	//scene1.trees.push_back(Tree(model_tree, Vector(-19, 0, -14)));
+	//scene1.trees.push_back(Tree(model_tree, Vector(-24, 0, -10)));
+
 	scene1.medicines.push_back(Medicine(model_medicine, Vector(14, 0, 20)));
+	scene1.medicines.push_back(Medicine(model_medicine, Vector(15, 0, 22)));
+	scene1.medicines.push_back(Medicine(model_medicine, Vector(-24, 0, -12)));
+	scene1.medicines.push_back(Medicine(model_medicine, Vector(-24, 0, -14)));
+	scene1.medicines.push_back(Medicine(model_medicine, Vector(-19, 0, -18)));
+
 	scene1.zombies.push_back(Zombie(model_zombie, Vector(20, 3.3, 10)));
+	scene1.zombies.push_back(Zombie(model_zombie, Vector(0, 3.3, 10)));
+	scene1.zombies.push_back(Zombie(model_zombie, Vector(-5, 3.3, 10)));
 
 	// Initialize Second Scene
 	scene2.player = Player(model_player, Vector(0, 0, 10));
