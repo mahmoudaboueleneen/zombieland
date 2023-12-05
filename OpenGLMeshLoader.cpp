@@ -1589,11 +1589,23 @@ void main(int argc, char** argv) {
 	scene1.zombies.push_back(Zombie(model_zombie, Vector(-5, 3.3, 10)));
 
 	// Initialize Second Scene
-	scene2.player = Player(model_player, Vector(0, 0, 10));
+	scene2.player = Player(model_player, Vector(25, 0, 25));
 	scene2.house = House(model_house, Vector(-30, 0, -20));
 	scene2.streetlamp = Streetlamp(model_streetlamp, Vector(20, 0, -15));
+
+	scene2.fences.push_back(Fence(model_fence, Vector(33, 0, -39)));
+	scene2.fences.push_back(Fence(model_fence, Vector(25, 0, -39)));
+	scene2.fences.push_back(Fence(model_fence, Vector(17, 0, -39)));
+	scene2.fences.push_back(Fence(model_fence, Vector(9, 0, -39)));
+	scene2.fences.push_back(Fence(model_fence, Vector(1, 0, -39)));
+	scene2.fences.push_back(Fence(model_fence, Vector(-7, 0, -39)));
+	scene2.fences.push_back(Fence(model_fence, Vector(-15, 0, -39)));
+	scene2.fences.push_back(Fence(model_fence, Vector(-23, 0, -39)));
+	scene2.fences.push_back(Fence(model_fence, Vector(-31, 0, -39)));
+	scene2.fences.push_back(Fence(model_fence, Vector(-39, 0, -39)));
+
+
 	scene2.jeeps.push_back(Jeep(model_jeep, Vector(25, 7, -25)));
-	scene2.fences.push_back(Fence(model_fence, Vector(15, 0, -5)));
 	scene2.medkits.push_back(Medkit(model_medkit, Vector(20, 0, 20)));
 	scene2.ghosts.push_back(Ghost(model_ghost, Vector(0, 0, 20)));
 
