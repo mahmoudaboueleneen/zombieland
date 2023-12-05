@@ -9,6 +9,10 @@
 #include <iostream>
 #include <chrono>
 #include <vector>
+#include <Windows.h>
+#include <mmsystem.h>
+
+#pragma comment(lib, "winmm.lib")
 
 #define DEG2RAD(a) (a * 0.0174532925)
 #ifndef M_PI
@@ -382,6 +386,8 @@ Model_3DS model_streetlamp;
 bool keys[256];
 int totalGameTime = 30;
 int startTime;
+
+bool isGameOver;
 
 // For handling jumping
 auto lastFrameTime = std::chrono::high_resolution_clock::now();
@@ -1045,6 +1051,9 @@ void DisplayDeathScreen() {
 	glutSwapBuffers();
 }
 void DisplayWinScreen() {
+	// Set the clear color to dark green
+	glClearColor(0.0f, 0.3f, 0.0f, 1.0f);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Set the projection matrix to orthographic for 2D rendering
@@ -1068,7 +1077,7 @@ void DisplayWinScreen() {
 	glRasterPos2f(WIDTH / 2 - 50, HEIGHT / 2);  // Adjust as needed
 
 	// Render the "YOU WIN" text
-	const char* text = "YOU WIN";
+	const char* text = "YOU HAVE SURVIVED";
 	int len = strlen(text);
 	for (int i = 0; i < len; i++) {
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, text[i]);
@@ -1079,7 +1088,7 @@ void DisplayWinScreen() {
 
 	// Render the score text
 	char scoreStr[20];
-	sprintf(scoreStr, "SCORE: %d", scoreToBeDisplayed);
+	sprintf(scoreStr, "SUPPLIES SCORE: %d", scoreToBeDisplayed);
 	len = strlen(scoreStr);
 	for (int i = 0; i < len; i++) {
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, scoreStr[i]);
@@ -1133,9 +1142,12 @@ void UpdateFirstScene(float deltaTime) {
 
 	// Check for collisions
 	if (scene1.player.playerBoundingBox.intersects(scene1.bunker.bunkerBoundingBox)) {
+		isGameOver = true;
 		DisableControls();
+		PlaySound(TEXT("sounds/win.wav"), NULL, SND_ASYNC | SND_FILENAME);
 		scoreToBeDisplayed = scene1.player.score;
 		glutDisplayFunc(DisplayWinScreen);
+		return;
 	}
 	for (auto& rock : scene1.rocks) {
 		if (scene1.player.playerBoundingBox.intersects(rock.rocksBoundingBox)) {
@@ -1149,6 +1161,8 @@ void UpdateFirstScene(float deltaTime) {
 	}
 	for (auto it = scene1.medicines.begin(); it != scene1.medicines.end(); ) {
 		if (scene1.player.playerBoundingBox.intersects(it->medicineBoundingBox)) {
+			PlaySound(TEXT("sounds/loot-item.wav"), NULL, SND_ASYNC | SND_FILENAME);
+
 			// Increase the player's score by the worth of the medicine
 			scene1.player.score += it->worth;
 
@@ -1229,12 +1243,18 @@ void UpdateFirstScene(float deltaTime) {
 
 		// Check if the zombie hits the player and enough time has passed since the last hit
 		if (scene1.player.playerBoundingBox.intersects(zombie.zombieBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
+			// Play sound effect
+			PlaySound(TEXT("sounds/pain.wav"), NULL, SND_ASYNC | SND_FILENAME);
+
 			scene1.player.health -= zombie.damage;
 
 			if (scene1.player.health <= 0) {
+				isGameOver = true;
 				scene1.player.health = 0;
 				DisableControls();
+				PlaySound(TEXT("sounds/dying.wav"), NULL, SND_ASYNC | SND_FILENAME);
 				glutDisplayFunc(DisplayDeathScreen);
+				return;
 			}
 
 			Vector pushBackDirection = scene1.player.playerPosition - zombie.zombiePosition;
@@ -1280,9 +1300,12 @@ void UpdateSecondScene(float deltaTime) {
 
 	// Check for collisions
 	if (scene2.player.playerBoundingBox.intersects(scene2.house.houseBoundingBox)) {
+		isGameOver = true;
 		DisableControls();
+		PlaySound(TEXT("sounds/win.wav"), NULL, SND_ASYNC | SND_FILENAME);
 		scoreToBeDisplayed = scene2.player.score;
 		glutDisplayFunc(DisplayWinScreen);
+		return;
 	}
 	if (scene2.player.playerBoundingBox.intersects(scene2.streetlamp.streetlampBoundingBox)) {
 		scene2.player.playerPosition = previousPlayerPosition;
@@ -1299,6 +1322,8 @@ void UpdateSecondScene(float deltaTime) {
 	}
 	for (auto it = scene2.medkits.begin(); it != scene2.medkits.end(); ) {
 		if (scene2.player.playerBoundingBox.intersects(it->medkitBoundingBox)) {
+			PlaySound(TEXT("sounds/loot-item.wav"), NULL, SND_ASYNC | SND_FILENAME);
+
 			// Increase the player's score by the worth of the medkit
 			scene2.player.score += it->worth;
 
@@ -1379,12 +1404,18 @@ void UpdateSecondScene(float deltaTime) {
 
 		// Check if the ghost hits the player and enough time has passed since the last hit
 		if (scene2.player.playerBoundingBox.intersects(ghost.ghostBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
+			// Play sound effect
+			PlaySound(TEXT("sounds/pain.wav"), NULL, SND_ASYNC | SND_FILENAME);
+
 			scene2.player.health -= ghost.damage;
 
 			if (scene2.player.health <= 0) {
+				isGameOver = true;
 				scene2.player.health = 0;
 				DisableControls();
+				PlaySound(TEXT("sounds/dying.wav"), NULL, SND_ASYNC | SND_FILENAME);
 				glutDisplayFunc(DisplayDeathScreen);
+				return;
 			}
 
 			Vector pushBackDirection = scene2.player.playerPosition - ghost.ghostPosition;
@@ -1400,6 +1431,10 @@ void UpdateSecondScene(float deltaTime) {
 	}
 }
 void Update() {
+	if (isGameOver) {
+		return;
+	}
+
 	auto currentFrameTime = std::chrono::high_resolution_clock::now();
 	float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentFrameTime - lastFrameTime).count();
 	lastFrameTime = currentFrameTime;
@@ -1513,6 +1548,9 @@ void main(int argc, char** argv) {
 	scene2.fences.push_back(Fence(model_fence, Vector(15, 0, -5)));
 	scene2.medkits.push_back(Medkit(model_medkit, Vector(20, 0, 20)));
 	scene2.ghosts.push_back(Ghost(model_ghost, Vector(0, 0, 20)));
+
+	// Play background ambience
+	//PlaySound(TEXT("sounds/manic-whistle.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_LOOP);
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
