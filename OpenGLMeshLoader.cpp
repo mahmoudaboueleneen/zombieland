@@ -884,10 +884,10 @@ void DisplayFirstScene(void) {
 	GLfloat player_spotlight_position[] = { scene1.player.playerPosition.x, scene1.player.playerPosition.y + 10, scene1.player.playerPosition.z, 1.0f };
 	glLightfv(GL_LIGHT1, GL_POSITION, player_spotlight_position);
 
-	GLfloat player_spotlight_ambient_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	GLfloat player_spotlight_ambient_light[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 	glLightfv(GL_LIGHT1, GL_AMBIENT, player_spotlight_ambient_light);
 
-	GLfloat player_spotlight_diffuse_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	GLfloat player_spotlight_diffuse_light[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, player_spotlight_diffuse_light);
 
 	GLfloat player_spotlight_spotDirection[] = { 0.0f, -1.0f, 0.0f }; // assuming the light should shine straight down
@@ -1077,10 +1077,10 @@ void DisplaySecondScene(void) {
 	GLfloat player_spotlight_position[] = { scene2.player.playerPosition.x, scene2.player.playerPosition.y + 10, scene2.player.playerPosition.z, 1.0f };
 	glLightfv(GL_LIGHT2, GL_POSITION, player_spotlight_position);
 
-	GLfloat player_spotlight_ambient_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	GLfloat player_spotlight_ambient_light[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 	glLightfv(GL_LIGHT2, GL_AMBIENT, player_spotlight_ambient_light);
 
-	GLfloat player_spotlight_diffuse_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	GLfloat player_spotlight_diffuse_light[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	glLightfv(GL_LIGHT2, GL_DIFFUSE, player_spotlight_diffuse_light);
 
 	GLfloat player_spotlight_spotDirection[] = { 0.0f, -1.0f, 0.0f }; // assuming the light should shine straight down
@@ -1090,6 +1090,18 @@ void DisplaySecondScene(void) {
 	glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 2.0f); // set focusing strength
 
 	glEnable(GL_LIGHT2);
+
+	// Set up fog
+	GLfloat fogColor[4] = { 0.5f, 0.5f, 0.5f, 1.0f }; // Set the fog color to gray
+
+	glEnable(GL_FOG); // Enable the fog
+	glFogi(GL_FOG_MODE, GL_LINEAR); // Set the fog mode to GL_LINEAR for linear fog
+	glFogfv(GL_FOG_COLOR, fogColor); // Set the fog color
+	glFogf(GL_FOG_DENSITY, 0.35f); // Set the density for exponential fog
+	glHint(GL_FOG_HINT, GL_DONT_CARE); // Let OpenGL decide which fog calculation to use
+	glFogf(GL_FOG_START, 10.0f); // For linear fog, specify the start depth
+	glFogf(GL_FOG_END, 100.0f); // For linear fog, specify the end depth
+
 
 	/*
 	// Draw Bounding Boxes for testing
@@ -1234,6 +1246,8 @@ void DisplaySecondScene(void) {
 	gluDeleteQuadric(qobj);
 	glPopMatrix();
 	glEnable(GL_LIGHTING);
+
+	glDisable(GL_FOG); // Disable the fog
 
 	glutSwapBuffers();
 }
