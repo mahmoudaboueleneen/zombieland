@@ -439,7 +439,7 @@ float hitCooldown = 0.75f;
 
 // For handling footstep sound and not playing it too often/every frame in scene 1
 int scene1FootstepCounter = 0;
-const int SCENE1_FOOTSTEP_THRESHOLD = 30;
+const int SCENE1_FOOTSTEP_THRESHOLD = 40;
 
 // For handling footstep sound and not playing it too often/every frame in scene 2
 int scene2FootstepCounter = 0;
