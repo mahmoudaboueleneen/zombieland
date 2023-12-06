@@ -9,6 +9,7 @@
 * Making health circle thicker caused bounding boxes to also be thicker.
 * Remove code duplication.
 * Reorder code blocks logically and add function headers to the top of the file.
+* Fix the warnings for floating point type conversion possible loss of precision.
 */
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
@@ -1383,12 +1384,14 @@ void DisplayFirstSceneWinScreen() {
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, scoreStr[i]);
 	}
 
-	// Draw the "Next Level" button
-	glColor3f(1, 1, 1); // Set the color to white
-	glRectf(WIDTH / 2 - 50, HEIGHT / 2 - 60, WIDTH / 2 + 50, HEIGHT / 2 - 80); // Adjust as needed
+	// Calculate the position of the "button" though we won't draw a button
+	float buttonX = WIDTH / 2 - 30;
+	float buttonY = HEIGHT / 2 - 70;
 
 	// Position the button text in the center of the button
-	glRasterPos2f(WIDTH / 2 - 30, HEIGHT / 2 - 70);  // Adjust as needed
+	glRasterPos2f(buttonX, buttonY + 18 / 2);  // Adjust as needed
+
+	glColor3f(0, 0, 0);  // Set the color to black for the text
 
 	// Render the button text
 	const char* buttonText = "NEXT LEVEL";
