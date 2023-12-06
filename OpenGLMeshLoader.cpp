@@ -39,6 +39,10 @@ class Vector {
 			z += value;
 		}
 
+		bool operator !=(const Vector& other) const {
+			return x != other.x || y != other.y || z != other.z;
+		}
+
 		Vector& operator +=(const Vector& other) {
 			x += other.x;
 			y += other.y;
@@ -71,6 +75,10 @@ class Vector {
 			x /= magnitude;
 			y /= magnitude;
 			z /= magnitude;
+		}
+
+		float length() const {
+			return sqrt(x * x + y * y + z * z);
 		}
 };
 class BoundingBox {
@@ -368,9 +376,11 @@ char title[] = "Zombieland";
 
 GLuint tex; // for sky
 GLTexture tex_ground;
+GLuint sunTex;
 
 GLuint tex2; // for dark sky
 GLTexture tex_ground2;
+GLuint sun2Tex;
 
 GLdouble fovy = 90.0;
 GLdouble aspectRatio = (GLdouble)WIDTH / (GLdouble)HEIGHT;
@@ -422,6 +432,23 @@ float gravity = 9.8;
 float lastHitTime = 0;
 float hitCooldown = 0.75f;
 
+// For handling footstep sound and not playing it too often/every frame
+int footstepCounter = 0;
+const int FOOTSTEP_THRESHOLD = 100;
+
+// For handling zombie sounds every interval of time
+float lastZombieSoundTime = 0.0f;
+float zombieSoundCooldown = 4.0f;
+float zombieSoundDistance = 15.0f;
+
+// For handling ghost sounds every interval of time
+float lastGhostSoundTime = 0.0f;
+float ghostSoundCooldown = 3.0f;
+float ghostSoundDistance = 15.0f;
+
+Vector sunPosition(50 + 70, 70, 0);
+GLfloat streetlampLightIntensity = 0.5f;
+
 // Config
 void InitLightSource() {
 	// Enable Lighting for this OpenGL Program
@@ -445,6 +472,31 @@ void InitLightSource() {
 
 	// Finally, define light source 0 position in World Space
 	GLfloat light_position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+}
+void InitSunLight() {
+	// Enable Lighting for this OpenGL Program
+	glEnable(GL_LIGHTING);
+
+	// Enable Light Source number 0
+	// OpenGL has 8 light sources
+	glEnable(GL_LIGHT0);
+
+	// Define Light source 0 ambient light
+	GLfloat ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f }; // Increase these values
+	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
+
+	// Define Light source 0 diffuse light
+	GLfloat diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f }; // Increase these values
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+
+	// Define Light source 0 Specular light
+	GLfloat specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
+
+	// Finally, define light source 0 position in World Space
+	// Position the light at the same position as the sun
+	GLfloat light_position[] = { sunPosition.x, sunPosition.y, sunPosition.z, 1.0f };
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 }
 void InitMaterial() {
@@ -488,7 +540,9 @@ void Init(void) {
 	// UP (ux, uy, uz):  denotes the upward orientation of the camera.							 //
 	//*******************************************************************************************//
 
-	InitLightSource();
+	// InitLightSource();
+
+	InitSunLight();
 
 	InitMaterial();
 
@@ -565,6 +619,9 @@ void LoadAssets() {
 	tex_ground2.Load("Textures/stone-ground.bmp");
 	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
 	loadBMP(&tex2, "Textures/dark-clouds.bmp", true);
+
+	loadBMP(&sunTex, "Textures/sun.bmp", true);
+	loadBMP(&sun2Tex, "Textures/sun2.bmp", true);
 }
 
 // Misc
@@ -768,10 +825,34 @@ void DisplayFirstScene(void) {
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 
+	// Enable Lighting for this OpenGL Program
+	glEnable(GL_LIGHTING);
+
+	// Enable Light Source number 0
+	glEnable(GL_LIGHT0);
+
+	// Define Light source 0 ambient light
+	GLfloat ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f }; // Increase these values
+	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
+
+	// Define Light source 0 diffuse light
+	GLfloat diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f }; // Increase these values
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+
+	// Define Light source 0 Specular light
+	GLfloat specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
+
+	// Finally, define light source 0 position in World Space
+	GLfloat light_position[] = { sunPosition.x, sunPosition.y, sunPosition.z, 1.0f };
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+	/*
 	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
 	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f, 0.0f };
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
+	*/
 
 	// Draw Bounding Boxes for testing
 	/*
@@ -871,7 +952,26 @@ void DisplayFirstScene(void) {
 		glPopMatrix();
 	}
 
+	// Draw the sun
+	glDisable(GL_LIGHTING);
+	glPushMatrix();
+	glTranslated(sunPosition.x, sunPosition.y, sunPosition.z);
+	GLfloat mat_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	GLfloat shininess[] = { 50.0f }; // Higher values make the object shinier
+	glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+	GLUquadricObj* sunQuad;
+	sunQuad = gluNewQuadric();
+	glBindTexture(GL_TEXTURE_2D, sunTex); // sunTex is the texture for the sun
+	gluQuadricTexture(sunQuad, true);
+	gluQuadricNormals(sunQuad, GL_SMOOTH);
+	gluSphere(sunQuad, 5, 100, 100); // Adjust the radius as needed
+	gluDeleteQuadric(sunQuad);
+	glPopMatrix();
+	glEnable(GL_LIGHTING);
+
 	// Draw Skybox
+	glDisable(GL_LIGHTING);
 	glPushMatrix();
 	GLUquadricObj* qobj;
 	qobj = gluNewQuadric();
@@ -883,6 +983,7 @@ void DisplayFirstScene(void) {
 	gluSphere(qobj, 100, 100, 100);
 	gluDeleteQuadric(qobj);
 	glPopMatrix();
+	glEnable(GL_LIGHTING);
 
 	glutSwapBuffers();
 }
@@ -892,10 +993,33 @@ void DisplaySecondScene(void) {
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 
+	glEnable(GL_LIGHTING);
+
+	// Enable Light Source number 0
+	glEnable(GL_LIGHT0);
+
+	// Define Light source 0 ambient light
+	GLfloat ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f }; // Decrease these values
+	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
+
+	// Define Light source 0 diffuse light
+	GLfloat diffuse[] = { 0.5f, 0.5f, 0.5f, 1.0f }; // Decrease these values
+	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+
+	// Define Light source 0 Specular light
+	GLfloat specular[] = { 0.5f, 0.5f, 0.5f, 1.0f }; // Decrease these values
+	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
+
+	// Finally, define light source 0 position in World Space
+	GLfloat light_position[] = { sunPosition.x, sunPosition.y, sunPosition.z, 1.0f };
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+	/*
 	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
 	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f, 0.0f };
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
+	*/
 
 	// Draw Bounding Boxes for testing
 
@@ -946,6 +1070,27 @@ void DisplaySecondScene(void) {
 	glScaled(0.03, 0.03, 0.03);
 	scene2.player.model_player.Draw();
 	glPopMatrix();
+
+	// Set up streetlamp light source
+	GLfloat streetlamp_light_position[] = { scene2.streetlamp.streetlampPosition.x, scene2.streetlamp.streetlampPosition.y + 5, scene2.streetlamp.streetlampPosition.z, 1.0f };
+	glLightfv(GL_LIGHT1, GL_POSITION, streetlamp_light_position);
+
+	GLfloat streetlamp_ambient_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	glLightfv(GL_LIGHT1, GL_AMBIENT, streetlamp_ambient_light);
+
+	GLfloat streetlamp_diffuse_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, streetlamp_diffuse_light);
+
+	// Set spotlight direction
+	GLfloat spotDirection[] = { 0.0f, -1.0f, 0.0f }; // assuming the light should shine straight down
+	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spotDirection);
+
+	// Set spotlight parameters
+	glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 45.0f); // set cutoff angle
+	glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 2.0f); // set focusing strength
+
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT1);
 
 	// Draw Streetlamp
 	glPushMatrix();
@@ -1007,7 +1152,26 @@ void DisplaySecondScene(void) {
 	scene2.house.model_house.Draw();
 	glPopMatrix();
 
+	// Draw the sun
+	glDisable(GL_LIGHTING);
+	glPushMatrix();
+	glTranslated(sunPosition.x, sunPosition.y, sunPosition.z);
+	GLfloat mat_specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	GLfloat shininess[] = { 50.0f }; // Higher values make the object shinier
+	glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+	GLUquadricObj* sunQuad;
+	sunQuad = gluNewQuadric();
+	glBindTexture(GL_TEXTURE_2D, sun2Tex); // sunTex is the texture for the sun
+	gluQuadricTexture(sunQuad, true);
+	gluQuadricNormals(sunQuad, GL_SMOOTH);
+	gluSphere(sunQuad, 5, 100, 100); // Adjust the radius as needed
+	gluDeleteQuadric(sunQuad);
+	glPopMatrix();
+	glEnable(GL_LIGHTING);
+
 	// Draw Skybox
+	glDisable(GL_LIGHTING);
 	glPushMatrix();
 	GLUquadricObj* qobj;
 	qobj = gluNewQuadric();
@@ -1019,6 +1183,7 @@ void DisplaySecondScene(void) {
 	gluSphere(qobj, 100, 100, 100);
 	gluDeleteQuadric(qobj);
 	glPopMatrix();
+	glEnable(GL_LIGHTING);
 
 	glutSwapBuffers();
 }
@@ -1033,6 +1198,8 @@ void SwitchScene() {
 	}
 }
 void DisplayDeathScreen() {
+	glDisable(GL_LIGHTING);
+
 	// Set the clear color to dark red
 	glClearColor(0.3f, 0.0f, 0.0f, 1.0f);
 
@@ -1049,9 +1216,6 @@ void DisplayDeathScreen() {
 	glPushMatrix();
 	glLoadIdentity();
 
-	// Disable lighting for 2D rendering
-	glDisable(GL_LIGHTING);
-
 	// Set the color to red
 	glColor3f(1, 0, 0);
 
@@ -1065,9 +1229,6 @@ void DisplayDeathScreen() {
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, text[i]);
 	}
 
-	// Re-enable lighting
-	glEnable(GL_LIGHTING);
-
 	// Restore the modelview matrix
 	glPopMatrix();
 
@@ -1078,9 +1239,13 @@ void DisplayDeathScreen() {
 	// Set the matrix mode back to modelview
 	glMatrixMode(GL_MODELVIEW);
 
+	glEnable(GL_LIGHTING);
+
 	glutSwapBuffers();
 }
 void DisplayWinScreen() {
+	glDisable(GL_LIGHTING);
+
 	// Set the clear color to dark green
 	glClearColor(0.0f, 0.3f, 0.0f, 1.0f);
 
@@ -1096,9 +1261,6 @@ void DisplayWinScreen() {
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	glLoadIdentity();
-
-	// Disable lighting for 2D rendering
-	glDisable(GL_LIGHTING);
 
 	// Set the color to green
 	glColor3f(0, 1, 0);
@@ -1124,9 +1286,6 @@ void DisplayWinScreen() {
 		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, scoreStr[i]);
 	}
 
-	// Re-enable lighting
-	glEnable(GL_LIGHTING);
-
 	// Restore the modelview matrix
 	glPopMatrix();
 
@@ -1136,6 +1295,8 @@ void DisplayWinScreen() {
 
 	// Set the matrix mode back to modelview
 	glMatrixMode(GL_MODELVIEW);
+
+	glEnable(GL_LIGHTING);
 
 	glutSwapBuffers();
 }
@@ -1296,6 +1457,25 @@ void UpdateFirstScene(float deltaTime) {
 			scene1.player.playerBoundingBox.maxPoint = scene1.player.playerPosition + Vector(1, 1, 1);
 
 			lastHitTime = currentTime;
+		}
+
+		float distance = (scene1.player.playerPosition - zombie.zombiePosition).length();
+		if (distance <= zombieSoundDistance && currentTime - lastZombieSoundTime >= zombieSoundCooldown) {
+			// Play zombie sound
+			PlaySound(TEXT("sounds/zombie-growl.wav"), NULL, SND_ASYNC | SND_FILENAME);
+			lastZombieSoundTime = currentTime;
+		}
+
+	}
+
+	// Check if the player has moved
+	if (scene1.player.playerPosition != previousPlayerPosition) {
+		footstepCounter++;
+
+		// If the counter reaches the threshold, play the footstep sound and reset the counter
+		if (footstepCounter >= FOOTSTEP_THRESHOLD) {
+			PlaySound(TEXT("sounds/grass-footsteps.wav"), NULL, SND_ASYNC | SND_FILENAME);
+			footstepCounter = 0;
 		}
 	}
 }
@@ -1458,7 +1638,30 @@ void UpdateSecondScene(float deltaTime) {
 
 			lastHitTime = currentTime;
 		}
+
+		// Check if the ghost is within a certain distance of the player and enough time has passed since the last sound
+		float distance = (scene2.player.playerPosition - ghost.ghostPosition).length();
+		if (distance <= ghostSoundDistance && currentTime - lastGhostSoundTime >= ghostSoundCooldown) {
+			// Play ghost sound
+			PlaySound(TEXT("sounds/ghost-groan.wav"), NULL, SND_ASYNC | SND_FILENAME);
+			lastGhostSoundTime = currentTime;
+		}
 	}
+
+	// Check if the player has moved
+	if (scene2.player.playerPosition != previousPlayerPosition) {
+		footstepCounter++;
+
+		// If the counter reaches the threshold, play the footstep sound and reset the counter
+		if (footstepCounter >= FOOTSTEP_THRESHOLD) {
+			PlaySound(TEXT("sounds/concrete-footsteps.wav"), NULL, SND_ASYNC | SND_FILENAME);
+			footstepCounter = 0;
+		}
+	}
+
+	// Update streetlamp light intensity
+	float time = glutGet(GLUT_ELAPSED_TIME) / 1000.0f; // get elapsed time in seconds
+	streetlampLightIntensity = 0.5f * (sin(time) + 1.0f); // light intensity goes up and down between 0 and 1
 }
 void Update() {
 	if (isGameOver) {
