@@ -662,7 +662,7 @@ void drawGround(GLTexture groundTexture) {
 	 * To fix this, we can divide the ground into smaller quads (a grid of quads instead of a single large quad). 
 	 * This way, there will be more vertices close to the light source, and the spotlight effect should be more visible.
 	*/
-	int groundSize = 100;
+	int groundSize = 90;
 	int numQuads = 20;  // Number of quads per side
 	float quadSize = (float)groundSize / numQuads;  // Size of each quad
 
@@ -1020,6 +1020,22 @@ void DisplaySecondScene(void) {
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 
 	glEnable(GL_LIGHTING);
+
+	// Set up player spotlight
+	glEnable(GL_LIGHT2);
+
+	// Update light position to player's position
+	GLfloat player_light_position[] = { scene2.player.playerPosition.x, scene2.player.playerPosition.y + 10, scene2.player.playerPosition.z - 10, 1.0f };
+	glLightfv(GL_LIGHT2, GL_POSITION, player_light_position);
+
+	// Set spotlight direction (downwards)
+	GLfloat spot_direction[] = { 0.0, -1.0, 0.0 };
+	glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, spot_direction);
+
+	// Set spotlight parameters
+	glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 45.0f); // set cutoff angle
+	glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 2.0f); // set focusing strength
+
 
 	// Enable Light Source number 0
 	glEnable(GL_LIGHT0);
