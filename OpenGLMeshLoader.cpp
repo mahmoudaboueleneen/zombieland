@@ -1,3 +1,9 @@
+/*
+* TODO:
+* Move variables that belong to a specific scene to their respective scene class.
+* Fix the hardcoded nature of the bounding box angles, as they don't rotate if we rotate their model. (Do like Fence class)
+* Fix performance issues related to too many objects in memory, and player speed being decreased by it.
+*/
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
 #include "GLTexture.h"
@@ -860,34 +866,41 @@ void DisplayFirstScene(void) {
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 
-	// Enable Lighting for this OpenGL Program
 	glEnable(GL_LIGHTING);
 
-	// Enable Light Source number 0
+	// Setup sunlight
 	glEnable(GL_LIGHT0);
 
-	// Define Light source 0 ambient light
-	GLfloat ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f }; // Increase these values
+	GLfloat ambient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
 	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
 
-	// Define Light source 0 diffuse light
-	GLfloat diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f }; // Increase these values
+	GLfloat diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
 
-	// Define Light source 0 Specular light
 	GLfloat specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
 
-	// Finally, define light source 0 position in World Space
 	GLfloat light_position[] = { sunPosition.x, sunPosition.y, sunPosition.z, 1.0f };
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
-	/*
-	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
-	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f, 0.0f };
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
-	*/
+	// Set up player spotlight light source coming from the sky down on the player and following him
+	GLfloat player_spotlight_position[] = { scene1.player.playerPosition.x, scene1.player.playerPosition.y + 10, scene1.player.playerPosition.z, 1.0f };
+	glLightfv(GL_LIGHT1, GL_POSITION, player_spotlight_position);
+
+	GLfloat player_spotlight_ambient_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	glLightfv(GL_LIGHT1, GL_AMBIENT, player_spotlight_ambient_light);
+
+	GLfloat player_spotlight_diffuse_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, player_spotlight_diffuse_light);
+
+	GLfloat player_spotlight_spotDirection[] = { 0.0f, -1.0f, 0.0f }; // assuming the light should shine straight down
+	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, player_spotlight_spotDirection);
+
+	glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 45.0f); // set cutoff angle
+	glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 2.0f); // set focusing strength
+
+	glEnable(GL_LIGHT1);
+
 
 	// Draw Bounding Boxes for testing
 	/*
@@ -997,7 +1010,7 @@ void DisplayFirstScene(void) {
 	glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
 	GLUquadricObj* sunQuad;
 	sunQuad = gluNewQuadric();
-	glBindTexture(GL_TEXTURE_2D, sunTex); // sunTex is the texture for the sun
+	glBindTexture(GL_TEXTURE_2D, sunTex);
 	gluQuadricTexture(sunQuad, true);
 	gluQuadricNormals(sunQuad, GL_SMOOTH);
 	gluSphere(sunQuad, 5, 100, 100); // Adjust the radius as needed
@@ -1030,51 +1043,60 @@ void DisplaySecondScene(void) {
 
 	glEnable(GL_LIGHTING);
 
-	// Set up player spotlight
-	glEnable(GL_LIGHT2);
-
-	// Update light position to player's position
-	GLfloat player_light_position[] = { scene2.player.playerPosition.x, scene2.player.playerPosition.y + 10, scene2.player.playerPosition.z - 10, 1.0f };
-	glLightfv(GL_LIGHT2, GL_POSITION, player_light_position);
-
-	// Set spotlight direction (downwards)
-	GLfloat spot_direction[] = { 0.0, -1.0, 0.0 };
-	glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, spot_direction);
-
-	// Set spotlight parameters
-	glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 45.0f); // set cutoff angle
-	glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 2.0f); // set focusing strength
-
-
-	// Enable Light Source number 0
-	glEnable(GL_LIGHT0);
-
-	// Define Light source 0 ambient light
-	GLfloat ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f }; // Decrease these values
+	// Setup darker sunlight
+	GLfloat ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
 	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
 
-	// Define Light source 0 diffuse light
-	GLfloat diffuse[] = { 0.5f, 0.5f, 0.5f, 1.0f }; // Decrease these values
+	GLfloat diffuse[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
 
-	// Define Light source 0 Specular light
-	GLfloat specular[] = { 0.5f, 0.5f, 0.5f, 1.0f }; // Decrease these values
+	GLfloat specular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
 
-	// Finally, define light source 0 position in World Space
 	GLfloat light_position[] = { sunPosition.x, sunPosition.y, sunPosition.z, 1.0f };
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
-	/*
-	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
-	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f, 0.0f };
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
-	*/
+	glEnable(GL_LIGHT0);
 
+	// Set up streetlamp light source
+	GLfloat streetlamp_light_position[] = { scene2.streetlamp.streetlampPosition.x, scene2.streetlamp.streetlampPosition.y + 10, scene2.streetlamp.streetlampPosition.z, 1.0f };
+	glLightfv(GL_LIGHT1, GL_POSITION, streetlamp_light_position);
+
+	GLfloat streetlamp_ambient_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	glLightfv(GL_LIGHT1, GL_AMBIENT, streetlamp_ambient_light);
+
+	GLfloat streetlamp_diffuse_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	glLightfv(GL_LIGHT1, GL_DIFFUSE, streetlamp_diffuse_light);
+
+	GLfloat spotDirection[] = { 0.0f, -1.0f, 0.0f }; // assuming the light should shine straight down
+	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spotDirection);
+
+	glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 45.0f); // set cutoff angle
+	glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 2.0f); // set focusing strength
+
+	glEnable(GL_LIGHT1);
+
+	// Set up player spotlight light source coming from the sky down on the player and following him
+	GLfloat player_spotlight_position[] = { scene2.player.playerPosition.x, scene2.player.playerPosition.y + 10, scene2.player.playerPosition.z, 1.0f };
+	glLightfv(GL_LIGHT2, GL_POSITION, player_spotlight_position);
+
+	GLfloat player_spotlight_ambient_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	glLightfv(GL_LIGHT2, GL_AMBIENT, player_spotlight_ambient_light);
+
+	GLfloat player_spotlight_diffuse_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	glLightfv(GL_LIGHT2, GL_DIFFUSE, player_spotlight_diffuse_light);
+
+	GLfloat player_spotlight_spotDirection[] = { 0.0f, -1.0f, 0.0f }; // assuming the light should shine straight down
+	glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, player_spotlight_spotDirection);
+
+	glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 45.0f); // set cutoff angle
+	glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 2.0f); // set focusing strength
+
+	glEnable(GL_LIGHT2);
+
+	/*
 	// Draw Bounding Boxes for testing
 
-	/*
 	drawBoundingBox(scene2.player.playerBoundingBox);
 	drawBoundingBox(scene2.house.houseBoundingBox);
 	drawBoundingBox(scene2.streetlamp.streetlampBoundingBox);
@@ -1091,9 +1113,10 @@ void DisplaySecondScene(void) {
 		drawBoundingBox(ghost.ghostBoundingBox);
 	}
 	*/
-
-	// Draw Time 
+	 
 	/*
+	// Draw Time
+
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
 	int elapsedTime = (currentTime - startTime) / 1000;
 	int remainingTime = totalGameTime - elapsedTime;
@@ -1121,27 +1144,6 @@ void DisplaySecondScene(void) {
 	glScaled(0.03, 0.03, 0.03);
 	scene2.player.model_player.Draw();
 	glPopMatrix();
-
-	// Set up streetlamp light source
-	GLfloat streetlamp_light_position[] = { scene2.streetlamp.streetlampPosition.x, scene2.streetlamp.streetlampPosition.y + 10, scene2.streetlamp.streetlampPosition.z, 1.0f };
-	glLightfv(GL_LIGHT1, GL_POSITION, streetlamp_light_position);
-
-	GLfloat streetlamp_ambient_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
-	glLightfv(GL_LIGHT1, GL_AMBIENT, streetlamp_ambient_light);
-
-	GLfloat streetlamp_diffuse_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
-	glLightfv(GL_LIGHT1, GL_DIFFUSE, streetlamp_diffuse_light);
-
-	// Set spotlight direction
-	GLfloat spotDirection[] = { 0.0f, -1.0f, 0.0f }; // assuming the light should shine straight down
-	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spotDirection);
-
-	// Set spotlight parameters
-	glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 45.0f); // set cutoff angle
-	glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 2.0f); // set focusing strength
-
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT1);
 
 	// Draw Streetlamp
 	glPushMatrix();
@@ -1213,7 +1215,7 @@ void DisplaySecondScene(void) {
 	glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
 	GLUquadricObj* sunQuad;
 	sunQuad = gluNewQuadric();
-	glBindTexture(GL_TEXTURE_2D, sun2Tex); // sunTex is the texture for the sun
+	glBindTexture(GL_TEXTURE_2D, sun2Tex);
 	gluQuadricTexture(sunQuad, true);
 	gluQuadricNormals(sunQuad, GL_SMOOTH);
 	gluSphere(sunQuad, 5, 100, 100); // Adjust the radius as needed
