@@ -11,6 +11,8 @@
 #include <vector>
 #include <Windows.h>
 #include <mmsystem.h>
+#include <irrKlang.h>
+using namespace irrklang;
 
 #pragma comment(lib, "winmm.lib")
 
@@ -432,9 +434,13 @@ float gravity = 9.8;
 float lastHitTime = 0;
 float hitCooldown = 0.75f;
 
-// For handling footstep sound and not playing it too often/every frame
-int footstepCounter = 0;
-const int FOOTSTEP_THRESHOLD = 100;
+// For handling footstep sound and not playing it too often/every frame in scene 1
+int scene1FootstepCounter = 0;
+const int SCENE1_FOOTSTEP_THRESHOLD = 30;
+
+// For handling footstep sound and not playing it too often/every frame in scene 2
+int scene2FootstepCounter = 0;
+const int SCENE2_FOOTSTEP_THRESHOLD = 50;
 
 // For handling zombie sounds every interval of time
 float lastZombieSoundTime = 0.0f;
@@ -448,6 +454,9 @@ float ghostSoundDistance = 15.0f;
 
 Vector sunPosition(50 + 70, 70, 0);
 GLfloat streetlampLightIntensity = 0.5f;
+
+// irrKlang sound engine
+ISoundEngine* soundEngine;
 
 // Config
 void InitLightSource() {
@@ -1377,7 +1386,7 @@ void UpdateFirstScene(float deltaTime) {
 	if (scene1.player.playerBoundingBox.intersects(scene1.bunker.bunkerBoundingBox)) {
 		isGameOver = true;
 		DisableControls();
-		PlaySound(TEXT("sounds/win.wav"), NULL, SND_ASYNC | SND_FILENAME);
+		soundEngine->play2D("sounds/win.wav", true);
 		scoreToBeDisplayed = scene1.player.score;
 		glutDisplayFunc(DisplayWinScreen);
 		return;
@@ -1394,7 +1403,7 @@ void UpdateFirstScene(float deltaTime) {
 	}
 	for (auto it = scene1.medicines.begin(); it != scene1.medicines.end(); ) {
 		if (scene1.player.playerBoundingBox.intersects(it->medicineBoundingBox)) {
-			PlaySound(TEXT("sounds/loot-item.wav"), NULL, SND_ASYNC | SND_FILENAME);
+			soundEngine->play2D("sounds/loot-item.wav");
 
 			// Increase the player's score by the worth of the medicine
 			scene1.player.score += it->worth;
@@ -1476,8 +1485,7 @@ void UpdateFirstScene(float deltaTime) {
 
 		// Check if the zombie hits the player and enough time has passed since the last hit
 		if (scene1.player.playerBoundingBox.intersects(zombie.zombieBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
-			// Play sound effect
-			PlaySound(TEXT("sounds/pain.wav"), NULL, SND_ASYNC | SND_FILENAME);
+			soundEngine->play2D("sounds/pain.wav");
 
 			scene1.player.health -= zombie.damage;
 
@@ -1485,7 +1493,7 @@ void UpdateFirstScene(float deltaTime) {
 				isGameOver = true;
 				scene1.player.health = 0;
 				DisableControls();
-				PlaySound(TEXT("sounds/dying.wav"), NULL, SND_ASYNC | SND_FILENAME);
+				soundEngine->play2D("sounds/dying.wav");
 				glutDisplayFunc(DisplayDeathScreen);
 				return;
 			}
@@ -1503,8 +1511,8 @@ void UpdateFirstScene(float deltaTime) {
 
 		float distance = (scene1.player.playerPosition - zombie.zombiePosition).length();
 		if (distance <= zombieSoundDistance && currentTime - lastZombieSoundTime >= zombieSoundCooldown) {
-			// Play zombie sound
-			PlaySound(TEXT("sounds/zombie-growl.wav"), NULL, SND_ASYNC | SND_FILENAME);
+			soundEngine->play2D("sounds/zombie-growl.wav");
+
 			lastZombieSoundTime = currentTime;
 		}
 
@@ -1512,12 +1520,13 @@ void UpdateFirstScene(float deltaTime) {
 
 	// Check if the player has moved
 	if (scene1.player.playerPosition != previousPlayerPosition) {
-		footstepCounter++;
+		scene1FootstepCounter++;
 
 		// If the counter reaches the threshold, play the footstep sound and reset the counter
-		if (footstepCounter >= FOOTSTEP_THRESHOLD) {
-			PlaySound(TEXT("sounds/grass-footsteps.wav"), NULL, SND_ASYNC | SND_FILENAME);
-			footstepCounter = 0;
+		if (scene1FootstepCounter >= SCENE1_FOOTSTEP_THRESHOLD) {
+			soundEngine->play2D("sounds/grass-footsteps.wav");
+
+			scene1FootstepCounter = 0;
 		}
 	}
 }
@@ -1554,7 +1563,7 @@ void UpdateSecondScene(float deltaTime) {
 	if (scene2.player.playerBoundingBox.intersects(scene2.house.houseBoundingBox)) {
 		isGameOver = true;
 		DisableControls();
-		PlaySound(TEXT("sounds/win.wav"), NULL, SND_ASYNC | SND_FILENAME);
+		soundEngine->play2D("sounds/win.wav");
 		scoreToBeDisplayed = scene2.player.score;
 		glutDisplayFunc(DisplayWinScreen);
 		return;
@@ -1574,7 +1583,7 @@ void UpdateSecondScene(float deltaTime) {
 	}
 	for (auto it = scene2.medkits.begin(); it != scene2.medkits.end(); ) {
 		if (scene2.player.playerBoundingBox.intersects(it->medkitBoundingBox)) {
-			PlaySound(TEXT("sounds/loot-item.wav"), NULL, SND_ASYNC | SND_FILENAME);
+			soundEngine->play2D("sounds/loot-item.wav");
 
 			// Increase the player's score by the worth of the medkit
 			scene2.player.score += it->worth;
@@ -1657,7 +1666,8 @@ void UpdateSecondScene(float deltaTime) {
 		// Check if the ghost hits the player and enough time has passed since the last hit
 		if (scene2.player.playerBoundingBox.intersects(ghost.ghostBoundingBox) && currentTime - lastHitTime >= hitCooldown) {
 			// Play sound effect
-			PlaySound(TEXT("sounds/pain.wav"), NULL, SND_ASYNC | SND_FILENAME);
+			soundEngine->play2D("sounds/pain.wav");
+
 
 			scene2.player.health -= ghost.damage;
 
@@ -1665,7 +1675,7 @@ void UpdateSecondScene(float deltaTime) {
 				isGameOver = true;
 				scene2.player.health = 0;
 				DisableControls();
-				PlaySound(TEXT("sounds/dying.wav"), NULL, SND_ASYNC | SND_FILENAME);
+				soundEngine->play2D("sounds/dying.wav");
 				glutDisplayFunc(DisplayDeathScreen);
 				return;
 			}
@@ -1684,20 +1694,21 @@ void UpdateSecondScene(float deltaTime) {
 		// Check if the ghost is within a certain distance of the player and enough time has passed since the last sound
 		float distance = (scene2.player.playerPosition - ghost.ghostPosition).length();
 		if (distance <= ghostSoundDistance && currentTime - lastGhostSoundTime >= ghostSoundCooldown) {
-			// Play ghost sound
-			PlaySound(TEXT("sounds/ghost-groan.wav"), NULL, SND_ASYNC | SND_FILENAME);
+			soundEngine->play2D("sounds/ghost-groan.wav");
+
 			lastGhostSoundTime = currentTime;
 		}
 	}
 
 	// Check if the player has moved
 	if (scene2.player.playerPosition != previousPlayerPosition) {
-		footstepCounter++;
+		scene2FootstepCounter++;
 
 		// If the counter reaches the threshold, play the footstep sound and reset the counter
-		if (footstepCounter >= FOOTSTEP_THRESHOLD) {
-			PlaySound(TEXT("sounds/concrete-footsteps.wav"), NULL, SND_ASYNC | SND_FILENAME);
-			footstepCounter = 0;
+		if (scene2FootstepCounter >= SCENE2_FOOTSTEP_THRESHOLD) {
+			soundEngine->play2D("sounds/concrete-footsteps.wav");
+
+			scene2FootstepCounter = 0;
 		}
 	}
 
@@ -1806,6 +1817,18 @@ void main(int argc, char** argv) {
 
 	Init();
 	LoadAssets();
+
+	// Create an instance of the sound engine
+	soundEngine = createIrrKlangDevice();
+
+	if (!soundEngine)
+	{
+		printf("Could not start up the sound engine\n");
+		return;
+	}
+
+	// Play background ambience
+	//soundEngine->play2D("sounds/manic-whistle.wav", true);
 
 	// Initialize First Scene
 	scene1.player = Player(model_player, Vector(20, 0, -20));
@@ -1929,9 +1952,6 @@ void main(int argc, char** argv) {
 
 	scene2.ghosts.push_back(Ghost(model_ghost, Vector(-10, 0, 20)));
 	scene2.ghosts.push_back(Ghost(model_ghost, Vector(-15, 0, 10)));
-
-	// Play background ambience
-	//PlaySound(TEXT("sounds/manic-whistle.wav"), NULL, SND_ASYNC | SND_FILENAME | SND_LOOP);
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
