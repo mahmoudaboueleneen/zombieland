@@ -633,31 +633,57 @@ void DisableControls() {
 
 // Drawing
 void drawGround(GLTexture groundTexture) {
-	glDisable(GL_LIGHTING);	// Disable lighting 
+	glEnable(GL_LIGHTING);
 
-	glColor3f(0.6, 0.6, 0.6);	// Dim the ground texture a bit
+	GLfloat mat_ambient[] = { 0.6f, 0.6f, 0.6f, 1.0f };
+	GLfloat mat_diffuse[] = { 0.6f, 0.6f, 0.6f, 1.0f };
+	GLfloat mat_specular[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+	GLfloat high_shininess[] = { 50.0 };
 
-	glEnable(GL_TEXTURE_2D);	// Enable 2D texturing
+	glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+	glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+	glMaterialfv(GL_FRONT, GL_SHININESS, high_shininess);
 
-	glBindTexture(GL_TEXTURE_2D, groundTexture.texture[0]);	// Bind the ground texture
+	glColor3f(1.0f, 1.0f, 1.0f);  // Set current color to white
 
-	glPushMatrix();
-	glBegin(GL_QUADS);
-	glNormal3f(0, 1, 0);	// Set quad normal direction.
-	glTexCoord2f(0, 0);		// Set tex coordinates ( Using (0,0) -> (5,5) with texture wrapping set to GL_REPEAT to simulate the ground repeated grass texture).
-	glVertex3f(-40, 0, -40);
-	glTexCoord2f(5, 0);
-	glVertex3f(40, 0, -40);
-	glTexCoord2f(5, 5);
-	glVertex3f(40, 0, 40);
-	glTexCoord2f(0, 5);
-	glVertex3f(-40, 0, 40);
-	glEnd();
-	glPopMatrix();
+	glEnable(GL_TEXTURE_2D);  // Enable 2D texturing
 
-	glEnable(GL_LIGHTING);	// Enable lighting again for other entites coming throung the pipeline.
+	glBindTexture(GL_TEXTURE_2D, groundTexture.texture[0]);  // Bind the ground texture
 
-	glColor3f(1, 1, 1);	// Set material back to white instead of grey used for the ground texture.
+	/*
+	 * OpenGL calculates lighting on a per-vertex basis, not per-pixel. 
+	 * This means that the lighting is calculated at the vertices of your ground quad, 
+	 * and the colors are then interpolated across the surface of the quad.
+	 * If the ground is a single large quad, the vertices are at the corners, 
+	 * so the lighting calculations are done at the corners. 
+	 * If the light source is not close to a corner, the lighting effect of a spotlight might not be visible, 
+	 * because the interpolated color across the surface of the quad does not vary much.
+	 * To fix this, we can divide the ground into smaller quads (a grid of quads instead of a single large quad). 
+	 * This way, there will be more vertices close to the light source, and the spotlight effect should be more visible.
+	*/
+	int groundSize = 100;
+	int numQuads = 20;  // Number of quads per side
+	float quadSize = (float)groundSize / numQuads;  // Size of each quad
+
+	// Draw a grid of quads
+	for (float x = -groundSize / 2; x < groundSize / 2; x += quadSize) {
+		for (float z = -groundSize / 2; z < groundSize / 2; z += quadSize) {
+			glBegin(GL_QUADS);
+			glNormal3f(0, 1, 0);  // Set quad normal direction.
+			glTexCoord2f(0, 0);  // Set tex coordinates
+			glVertex3f(x, 0, z);
+			glTexCoord2f(1, 0);
+			glVertex3f(x + quadSize, 0, z);
+			glTexCoord2f(1, 1);
+			glVertex3f(x + quadSize, 0, z + quadSize);
+			glTexCoord2f(0, 1);
+			glVertex3f(x, 0, z + quadSize);
+			glEnd();
+		}
+	}
+
+	glDisable(GL_TEXTURE_2D);  // Disable 2D texturing
 }
 void drawSurroundingStatues() {
 	int x = 40;
@@ -1072,7 +1098,7 @@ void DisplaySecondScene(void) {
 	glPopMatrix();
 
 	// Set up streetlamp light source
-	GLfloat streetlamp_light_position[] = { scene2.streetlamp.streetlampPosition.x, scene2.streetlamp.streetlampPosition.y + 5, scene2.streetlamp.streetlampPosition.z, 1.0f };
+	GLfloat streetlamp_light_position[] = { scene2.streetlamp.streetlampPosition.x, scene2.streetlamp.streetlampPosition.y + 10, scene2.streetlamp.streetlampPosition.z, 1.0f };
 	glLightfv(GL_LIGHT1, GL_POSITION, streetlamp_light_position);
 
 	GLfloat streetlamp_ambient_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
