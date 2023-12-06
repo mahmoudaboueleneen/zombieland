@@ -1507,6 +1507,7 @@ void UpdateFirstScene(float deltaTime) {
 		isGameOver = true;
 		glutSetCursor(GLUT_CURSOR_INHERIT);
 		DisableControls();
+		soundEngine->stopAllSounds();
 		soundEngine->play2D("sounds/win.wav");
 		scoreToBeDisplayed = scene1.player.score;
 		glutDisplayFunc(DisplayFirstSceneWinScreen);
@@ -1615,6 +1616,7 @@ void UpdateFirstScene(float deltaTime) {
 				scene1.player.health = 0;
 				glutSetCursor(GLUT_CURSOR_INHERIT);
 				DisableControls();
+				soundEngine->stopAllSounds();
 				soundEngine->play2D("sounds/dying.wav");
 				glutDisplayFunc(DisplayDeathScreen);
 				return;
@@ -1686,6 +1688,7 @@ void UpdateSecondScene(float deltaTime) {
 		isGameOver = true;
 		glutSetCursor(GLUT_CURSOR_INHERIT);
 		DisableControls();
+		soundEngine->stopAllSounds();
 		soundEngine->play2D("sounds/win.wav");
 		scoreToBeDisplayed = scene2.player.score;
 		glutDisplayFunc(DisplaySecondSceneWinScreen);
@@ -1799,6 +1802,7 @@ void UpdateSecondScene(float deltaTime) {
 				scene2.player.health = 0;
 				glutSetCursor(GLUT_CURSOR_INHERIT);
 				DisableControls();
+				soundEngine->stopAllSounds();
 				soundEngine->play2D("sounds/dying.wav");
 				glutDisplayFunc(DisplayDeathScreen);
 				return;
