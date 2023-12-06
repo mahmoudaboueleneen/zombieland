@@ -10,6 +10,7 @@
 * Remove code duplication.
 * Reorder code blocks logically and add function headers to the top of the file.
 * Fix the warnings for floating point type conversion possible loss of precision.
+* Clean up scene switching code.
 */
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
@@ -1282,6 +1283,7 @@ void SwitchScene() {
 		glutDisplayFunc(DisplaySecondScene);
 		EnableControls();
 		ResetControls();
+		soundEngine->play2D("sounds/manic-whistle.wav", true);
 	}
 	else if (currentScene == 2) {
 		isGameOver = false;
@@ -1291,6 +1293,7 @@ void SwitchScene() {
 		glutDisplayFunc(DisplayFirstScene);
 		EnableControls();
 		ResetControls();
+		soundEngine->play2D("sounds/manic-whistle.wav", true);
 	}
 
 	glutPostRedisplay();
@@ -1974,7 +1977,7 @@ void main(int argc, char** argv) {
 	}
 
 	// Play background ambience
-	//soundEngine->play2D("sounds/manic-whistle.wav", true);
+	soundEngine->play2D("sounds/manic-whistle.wav", true);
 
 	// Initialize First Scene
 	scene1.player = Player(model_player, Vector(20, 0, -20));

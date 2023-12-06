@@ -87,7 +87,7 @@
   <ItemGroup>
     <ClCompile Include="GLTexture.cpp" />
     <ClCompile Include="Model_3DS.cpp" />
-    <ClCompile Include="OpenGLMeshLoader.cpp" />
+    <ClCompile Include="UA07-Zombieland.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GLTexture.h" />
