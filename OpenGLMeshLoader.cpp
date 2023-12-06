@@ -1,9 +1,14 @@
 /*
+* Please note that this project was heavily rushed due to tight deadlines.
+* 
 * TODO:
 * Move variables that belong to a specific scene to their respective scene class.
 * Fix the hardcoded nature of the bounding box angles, as they don't rotate if we rotate their model. (Do like Fence class)
 * Fix performance issues related to too many objects in memory, and player speed being decreased by it.
 * Fix HUD colors being affected by lighting.
+* Making health circle thicker caused bounding boxes to also be thicker.
+* Remove code duplication.
+* Reorder code blocks logically and add function headers to the top of the file.
 */
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
@@ -23,6 +28,11 @@ using namespace irrklang;
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
+
+// Function declarations
+void KeyboardDown(unsigned char button, int x, int y);
+void KeyboardUp(unsigned char button, int x, int y);
+void MouseMoved(int x, int y);
 
 // Enums
 enum CameraMode { FIRST_PERSON, THIRD_PERSON };
@@ -629,9 +639,8 @@ void LoadAssets() {
 	// Loading Texture files
 	tex_ground.Load("Textures/grass-ground.bmp");
 	tex_ground2.Load("Textures/stone-ground.bmp");
-	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
+	loadBMP(&tex, "Textures/clear-sky-spherical.bmp", true);
 	loadBMP(&tex2, "Textures/dark-clouds.bmp", true);
-
 	loadBMP(&sunTex, "Textures/sun.bmp", true);
 	loadBMP(&sun2Tex, "Textures/sun2.bmp", true);
 }
@@ -641,6 +650,16 @@ void DisableControls() {
 	glutKeyboardFunc(NULL);
 	glutKeyboardUpFunc(NULL);
 	glutPassiveMotionFunc(NULL);
+}
+void EnableControls() {
+	glutKeyboardFunc(KeyboardDown);
+	glutKeyboardUpFunc(KeyboardUp);
+	glutPassiveMotionFunc(MouseMoved);
+}
+void ResetControls() {
+	for (int i = 0; i < 256; i++) {
+		keys[i] = false;
+	}
 }
 
 // Drawing
@@ -657,11 +676,11 @@ void drawGround(GLTexture groundTexture) {
 	glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
 	glMaterialfv(GL_FRONT, GL_SHININESS, high_shininess);
 
-	glColor3f(1.0f, 1.0f, 1.0f);  // Set current color to white
+	glColor3f(1.0f, 1.0f, 1.0f);
 
-	glEnable(GL_TEXTURE_2D);  // Enable 2D texturing
+	glEnable(GL_TEXTURE_2D);
 
-	glBindTexture(GL_TEXTURE_2D, groundTexture.texture[0]);  // Bind the ground texture
+	glBindTexture(GL_TEXTURE_2D, groundTexture.texture[0]);
 
 	/*
 	 * OpenGL calculates lighting on a per-vertex basis, not per-pixel. 
@@ -898,7 +917,6 @@ void DisplayFirstScene(void) {
 
 	glEnable(GL_LIGHT1);
 
-
 	// Draw Bounding Boxes for testing
 	/*
 	drawBoundingBox(scene1.player.playerBoundingBox);
@@ -1062,8 +1080,11 @@ void DisplaySecondScene(void) {
 	GLfloat streetlamp_ambient_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
 	glLightfv(GL_LIGHT1, GL_AMBIENT, streetlamp_ambient_light);
 
-	GLfloat streetlamp_diffuse_light[] = { streetlampLightIntensity, streetlampLightIntensity, streetlampLightIntensity, 1.0f };
+	GLfloat streetlamp_diffuse_light[] = { streetlampLightIntensity, streetlampLightIntensity * 0.8f, streetlampLightIntensity * 0.1f, 1.0f }; // Yellowish light
 	glLightfv(GL_LIGHT1, GL_DIFFUSE, streetlamp_diffuse_light);
+
+	GLfloat streetlamp_specular_light[] = { streetlampLightIntensity, streetlampLightIntensity * 0.8f, streetlampLightIntensity * 0.1f, 1.0f }; // Yellowish light
+	glLightfv(GL_LIGHT1, GL_SPECULAR, streetlamp_specular_light);
 
 	GLfloat spotDirection[] = { 0.0f, -1.0f, 0.0f }; // assuming the light should shine straight down
 	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, spotDirection);
@@ -1247,19 +1268,31 @@ void DisplaySecondScene(void) {
 	glPopMatrix();
 	glEnable(GL_LIGHTING);
 
-	glDisable(GL_FOG); // Disable the fog
+	glDisable(GL_FOG);
 
 	glutSwapBuffers();
 }
 void SwitchScene() {
 	if (currentScene == 1) {
+		isGameOver = false;
+		glutSetCursor(GLUT_CURSOR_NONE);
+		scoreToBeDisplayed = 0;
 		currentScene = 2;
 		glutDisplayFunc(DisplaySecondScene);
+		EnableControls();
+		ResetControls();
 	}
 	else if (currentScene == 2) {
+		isGameOver = false;
+		glutSetCursor(GLUT_CURSOR_NONE);
+		scoreToBeDisplayed = 0;
 		currentScene = 1;
 		glutDisplayFunc(DisplayFirstScene);
+		EnableControls();
+		ResetControls();
 	}
+
+	glutPostRedisplay();
 }
 void DisplayDeathScreen() {
 	glDisable(GL_LIGHTING);
@@ -1307,7 +1340,78 @@ void DisplayDeathScreen() {
 
 	glutSwapBuffers();
 }
-void DisplayWinScreen() {
+void DisplayFirstSceneWinScreen() {
+	glDisable(GL_LIGHTING);
+
+	// Set the clear color to dark green
+	glClearColor(0.0f, 0.3f, 0.0f, 1.0f);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Set the projection matrix to orthographic for 2D rendering
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+	gluOrtho2D(0, WIDTH, 0, HEIGHT);  // Adjust as needed
+
+	// Set the modelview matrix to identity for 2D rendering
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	glLoadIdentity();
+
+	// Set the color to green
+	glColor3f(0, 1, 0);
+
+	// Position the text in the center of the screen
+	glRasterPos2f(WIDTH / 2 - 50, HEIGHT / 2);  // Adjust as needed
+
+	// Render the "YOU WIN" text
+	const char* text = "YOU SURVIVED";
+	int len = strlen(text);
+	for (int i = 0; i < len; i++) {
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, text[i]);
+	}
+
+	// Position the score text below the "YOU WIN" text
+	glRasterPos2f(WIDTH / 2 - 50, HEIGHT / 2 - 20);  // Adjust as needed
+
+	// Render the score text
+	char scoreStr[20];
+	sprintf(scoreStr, "SCORE: %d", scoreToBeDisplayed);
+	len = strlen(scoreStr);
+	for (int i = 0; i < len; i++) {
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, scoreStr[i]);
+	}
+
+	// Draw the "Next Level" button
+	glColor3f(1, 1, 1); // Set the color to white
+	glRectf(WIDTH / 2 - 50, HEIGHT / 2 - 60, WIDTH / 2 + 50, HEIGHT / 2 - 80); // Adjust as needed
+
+	// Position the button text in the center of the button
+	glRasterPos2f(WIDTH / 2 - 30, HEIGHT / 2 - 70);  // Adjust as needed
+
+	// Render the button text
+	const char* buttonText = "NEXT LEVEL";
+	len = strlen(buttonText);
+	for (int i = 0; i < len; i++) {
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, buttonText[i]);
+	}
+
+	// Restore the modelview matrix
+	glPopMatrix();
+
+	// Restore the projection matrix
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+
+	// Set the matrix mode back to modelview
+	glMatrixMode(GL_MODELVIEW);
+
+	glEnable(GL_LIGHTING);
+
+	glutSwapBuffers();
+}
+void DisplaySecondSceneWinScreen() {
 	glDisable(GL_LIGHTING);
 
 	// Set the clear color to dark green
@@ -1398,10 +1502,11 @@ void UpdateFirstScene(float deltaTime) {
 	// Check for collisions
 	if (scene1.player.playerBoundingBox.intersects(scene1.bunker.bunkerBoundingBox)) {
 		isGameOver = true;
+		glutSetCursor(GLUT_CURSOR_INHERIT);
 		DisableControls();
-		soundEngine->play2D("sounds/win.wav", true);
+		soundEngine->play2D("sounds/win.wav");
 		scoreToBeDisplayed = scene1.player.score;
-		glutDisplayFunc(DisplayWinScreen);
+		glutDisplayFunc(DisplayFirstSceneWinScreen);
 		return;
 	}
 	for (auto& rock : scene1.rocks) {
@@ -1505,6 +1610,7 @@ void UpdateFirstScene(float deltaTime) {
 			if (scene1.player.health <= 0) {
 				isGameOver = true;
 				scene1.player.health = 0;
+				glutSetCursor(GLUT_CURSOR_INHERIT);
 				DisableControls();
 				soundEngine->play2D("sounds/dying.wav");
 				glutDisplayFunc(DisplayDeathScreen);
@@ -1575,10 +1681,11 @@ void UpdateSecondScene(float deltaTime) {
 	// Check for collisions
 	if (scene2.player.playerBoundingBox.intersects(scene2.house.houseBoundingBox)) {
 		isGameOver = true;
+		glutSetCursor(GLUT_CURSOR_INHERIT);
 		DisableControls();
 		soundEngine->play2D("sounds/win.wav");
 		scoreToBeDisplayed = scene2.player.score;
-		glutDisplayFunc(DisplayWinScreen);
+		glutDisplayFunc(DisplaySecondSceneWinScreen);
 		return;
 	}
 	if (scene2.player.playerBoundingBox.intersects(scene2.streetlamp.streetlampBoundingBox)) {
@@ -1687,6 +1794,7 @@ void UpdateSecondScene(float deltaTime) {
 			if (scene2.player.health <= 0) {
 				isGameOver = true;
 				scene2.player.health = 0;
+				glutSetCursor(GLUT_CURSOR_INHERIT);
 				DisableControls();
 				soundEngine->play2D("sounds/dying.wav");
 				glutDisplayFunc(DisplayDeathScreen);
@@ -1763,6 +1871,7 @@ void KeyboardDown(unsigned char button, int x, int y) {
 	}
 	else if (button == ' ' && !isJumping) {
 		isJumping = true;
+		soundEngine->play2D("sounds/jump.wav");
 		verticalVelocity = 5;
 		jumpTime = 0;
 	}
@@ -1810,6 +1919,22 @@ void MouseMoved(int x, int y) {
 	// Warp mouse cursor back to the center of the window
 	glutWarpPointer(centerX, centerY);
 }
+void MouseFunc(int button, int state, int x, int y) {
+	y = HEIGHT - y; // Convert from window space to 2D rendering space
+
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && currentScene == 1) {
+		// Calculate the bounds of the text
+		int textWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_18, (unsigned char*)"NEXT LEVEL");
+		int textHeight = 18; // Height of GLUT_BITMAP_HELVETICA_18
+
+		// Check if the click is within the text's rectangle
+		if (x >= WIDTH / 2 - 30 && x <= WIDTH / 2 - 30 + textWidth && y >= HEIGHT / 2 - 70 && y <= HEIGHT / 2 - 70 + textHeight) {
+			printf("Switching scene...\n");
+
+			SwitchScene();
+		}
+	}
+}
 
 // Main
 void main(int argc, char** argv) {
@@ -1826,6 +1951,7 @@ void main(int argc, char** argv) {
 	glutReshapeFunc(Reshape);
 	glutIdleFunc(Update);
 	glutPassiveMotionFunc(MouseMoved);
+	glutMouseFunc(MouseFunc);
 	glutSetCursor(GLUT_CURSOR_NONE);
 
 	Init();
