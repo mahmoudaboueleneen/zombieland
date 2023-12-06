@@ -3,6 +3,7 @@
 * Move variables that belong to a specific scene to their respective scene class.
 * Fix the hardcoded nature of the bounding box angles, as they don't rotate if we rotate their model. (Do like Fence class)
 * Fix performance issues related to too many objects in memory, and player speed being decreased by it.
+* Fix HUD colors being affected by lighting.
 */
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
@@ -15,12 +16,8 @@
 #include <iostream>
 #include <chrono>
 #include <vector>
-#include <Windows.h>
-#include <mmsystem.h>
 #include <irrKlang.h>
 using namespace irrklang;
-
-#pragma comment(lib, "winmm.lib")
 
 #define DEG2RAD(a) (a * 0.0174532925)
 #ifndef M_PI
